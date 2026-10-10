@@ -128,10 +128,10 @@ Las partidas compartidas se generan con una semilla (`src/lib/online/seeded.ts`)
 1. Crea una cuenta en [supabase.com](https://supabase.com) y un proyecto nuevo (gratis).
 2. En el proyecto: **SQL Editor → New query**, pega el contenido de [`supabase/schema.sql`](supabase/schema.sql) y pulsa **Run**.
 3. En **Project Settings → API** (o *Data API*) copia la **Project URL** y la clave **anon public**.
-4. En GitHub: **Settings → Secrets and variables → Actions → New repository secret**, crea:
-   - `SUPABASE_URL` con la Project URL,
-   - `SUPABASE_ANON_KEY` con la clave anon.
-5. Vuelve a generar el APK: pestaña **Actions → Android APK → Run workflow** (o sube cualquier cambio).
+4. Pon la URL y la clave en `src/lib/online/client.ts` (`DEFAULT_URL` / `DEFAULT_KEY`) o, si prefieres no tenerlas en el código, como secretos de GitHub `SUPABASE_URL` y `SUPABASE_ANON_KEY` (**Settings → Secrets and variables → Actions**).
+5. Vuelve a generar el APK (sube el cambio o **Actions → Android APK → Run workflow**).
+
+Este repositorio ya está conectado al proyecto `octhrztpcljpdopdimrj`.
 
 La clave *anon* es pública por diseño: lo que cada uno puede hacer lo limitan las reglas de seguridad (RLS) del esquema, que permiten leer y añadir resultados pero no borrar ni modificar los de otros.
 

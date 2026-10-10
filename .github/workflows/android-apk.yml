@@ -41,6 +41,17 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Check the online server
+        # Informative only: confirms the Supabase tables and views exist.
+        continue-on-error: true
+        run: |
+          URL="${EXPO_PUBLIC_SUPABASE_URL:-$(node -e "console.log(require('fs').readFileSync('src/lib/online/client.ts','utf8').match(/DEFAULT_URL = '([^']+)'/)[1])")}"
+          KEY="${EXPO_PUBLIC_SUPABASE_ANON_KEY:-$(node -e "console.log(require('fs').readFileSync('src/lib/online/client.ts','utf8').match(/DEFAULT_KEY = '([^']+)'/)[1])")}"
+          for t in players scores daily_results challenges challenge_results leaderboard daily_board challenge_board; do
+            code=$(curl -s -o /tmp/out.txt -w '%{http_code}' "$URL/rest/v1/$t?select=*&limit=1" -H "apikey: $KEY")
+            echo "$t -> HTTP $code $(head -c 160 /tmp/out.txt)"
+          done
+
       - name: Type check and tests
         run: |
           npx tsc --noEmit
