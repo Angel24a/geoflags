@@ -1,3 +1,4 @@
+import { describe, expect, it } from '@jest/globals';
 import { BY_ID } from '@/data';
 import { fuzzyEquals, levenshtein, matchesCapital, matchesName, normalize, suggest } from '@/lib/text';
 

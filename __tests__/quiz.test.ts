@@ -1,3 +1,4 @@
+import { describe, expect, it } from '@jest/globals';
 import { BY_ID, ENTITIES } from '@/data';
 import { mulberry32 } from '@/lib/random';
 import { buildDeck, distractors, eligibleFor, hasAttr, isValidConfig, makeQuestion, nextTarget, type QuizConfig } from '@/lib/quiz';

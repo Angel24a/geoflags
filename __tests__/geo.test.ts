@@ -1,3 +1,4 @@
+import { describe, expect, it } from '@jest/globals';
 import { bearing, compass, distanceKm, featureAt, hasShape, locate, shapePath } from '@/lib/geo';
 
 describe('geo', () => {

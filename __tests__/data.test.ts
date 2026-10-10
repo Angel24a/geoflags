@@ -1,3 +1,4 @@
+import { describe, expect, it } from '@jest/globals';
 import { BY_ID, ENTITIES, FLAGS, PIXELS } from '@/data';
 
 describe('generated data', () => {

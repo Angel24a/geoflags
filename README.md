@@ -64,11 +64,14 @@ npx expo start
 
 ### Instalarla en Android (APK)
 
-```bash
-npx eas-cli@latest build -p android --profile preview
-```
+Cada push a `main` (o a una rama `claude/…`) compila el APK con GitHub Actions
+(`.github/workflows/android-apk.yml`) y lo publica en la release
+**[apk-latest](https://github.com/Angel24a/geoflags/releases/tag/apk-latest)**.
+Abre ese enlace en el móvil, descarga `geoflags.apk` e instálalo (acepta instalar
+apps de origen desconocido). También se puede lanzar a mano desde la pestaña
+*Actions → Android APK → Run workflow*.
 
-Genera un `.apk` que puedes pasar a tus amigos e instalar directamente (requiere una cuenta gratuita de Expo).
+Alternativa con la nube de Expo: `npx eas-cli@latest build -p android --profile preview`.
 En iPhone, sin la cuenta de desarrollador de Apple (99 $/año) se puede usar con Expo Go.
 
 ## Desarrollo

@@ -1,3 +1,4 @@
+import { describe, expect, it } from '@jest/globals';
 import { BY_ID, ENTITIES, FLAGS } from '@/data';
 import { areNeighbors, makeChain, shortestPath } from '@/lib/chain';
 import { pickSortable, sameDesign } from '@/lib/games';
