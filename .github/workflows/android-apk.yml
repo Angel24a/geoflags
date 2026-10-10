@@ -1,0 +1,94 @@
+name: Android APK
+
+# Builds an installable APK and publishes it as the "apk-latest" release.
+on:
+  push:
+    branches: [main, 'claude/**']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-apk-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      # Shown in the app and compared by its "Buscar actualizaciones" button.
+      BUILD_NUMBER: ${{ github.run_number }}
+      # Online mode (optional): add these two repository secrets from your Supabase project.
+      EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check the online server
+        # Informative only: confirms the Supabase tables and views exist.
+        continue-on-error: true
+        run: |
+          URL="${EXPO_PUBLIC_SUPABASE_URL:-$(node -e "console.log(require('fs').readFileSync('src/lib/online/client.ts','utf8').match(/DEFAULT_URL = '([^']+)'/)[1])")}"
+          KEY="${EXPO_PUBLIC_SUPABASE_ANON_KEY:-$(node -e "console.log(require('fs').readFileSync('src/lib/online/client.ts','utf8').match(/DEFAULT_KEY = '([^']+)'/)[1])")}"
+          for t in players scores daily_results challenges challenge_results leaderboard daily_board challenge_board; do
+            code=$(curl -s -o /tmp/out.txt -w '%{http_code}' "$URL/rest/v1/$t?select=*&limit=1" -H "apikey: $KEY")
+            echo "$t -> HTTP $code $(head -c 160 /tmp/out.txt)"
+          done
+
+      - name: Type check and tests
+        run: |
+          npx tsc --noEmit
+          npx jest --ci
+
+      - name: Generate native Android project
+        run: npx expo prebuild --platform android --no-install
+        env:
+          CI: 1
+
+      - name: Build release APK
+        working-directory: android
+        # arm64 covers practically every modern Android phone and halves the build time.
+        run: ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a --no-daemon
+
+      - name: Rename APK and write version info
+        run: |
+          cp android/app/build/outputs/apk/release/app-release.apk geoflags.apk
+          NOTES=$(git log -1 --pretty=%s | head -c 200)
+          node -e 'require("fs").writeFileSync("version.json", JSON.stringify({ build: Number(process.env.BUILD_NUMBER), date: new Date().toISOString(), notes: process.argv[1] }))' "$NOTES"
+          cat version.json
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: geoflags-apk
+          path: |
+            geoflags.apk
+            version.json
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          NOTES="Versión ${BUILD_NUMBER}, generada desde ${GITHUB_REF_NAME} (${GITHUB_SHA::7}). Descarga geoflags.apk en el móvil e instálalo encima de la anterior: el progreso se mantiene."
+          if gh release view apk-latest >/dev/null 2>&1; then
+            gh release upload apk-latest geoflags.apk version.json --clobber
+            gh release edit apk-latest --notes "$NOTES"
+          else
+            gh release create apk-latest geoflags.apk version.json --prerelease --title "GeoFlags (última versión)" --notes "$NOTES" --target "$GITHUB_SHA"
+          fi
