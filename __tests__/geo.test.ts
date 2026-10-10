@@ -24,3 +24,20 @@ describe('geo', () => {
     expect(locate('es')).toEqual([-4, 40]);
   });
 });
+
+describe('silhouettes', () => {
+  it('keeps the main land of every shape-quiz territory', () => {
+    // Australia used to be replaced by Ashmore and Cartier Islands (same ISO code)
+    expect(featureAt([134, -25])).toBe('au');
+    expect(featureAt([-58.4, -34.6])).toBe('ar');
+  });
+
+  it('excludes unrecognisable silhouettes from shape questions', () => {
+    const { BY_ID } = require('@/data');
+    expect(BY_ID.get('au').geo).toBe('shape');
+    expect(BY_ID.get('cl').geo).toBe('shape');
+    expect(BY_ID.get('eh').geo).toBe('tiny');
+    expect(BY_ID.get('va').geo).toBe('tiny');
+    expect(BY_ID.get('mh').geo).toBe('tiny');
+  });
+});

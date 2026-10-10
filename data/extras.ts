@@ -53,11 +53,13 @@ const abkhazia = (() => {
   const s = H / 7;
   const cw = 250, ch = 3 * s;
   // open hand
+  // open right hand, palm facing the viewer
+  const finger = (x: number, y: number, h: number) => `<rect x="${x}" y="${y}" width="8" height="${h}" rx="4" fill="#fff"/>`;
   const hand =
-    `<g transform="translate(${cw / 2 - 22} ${ch / 2 - 10}) scale(0.9)">` +
-    rect(8, 26, 34, 30, '#fff') +
-    rect(8, 4, 7, 26, '#fff') + rect(17, 0, 7, 30, '#fff') + rect(26, 2, 7, 28, '#fff') + rect(35, 8, 7, 22, '#fff') +
-    poly([[0, 26], [8, 30], [8, 44], [2, 36]], '#fff') +
+    `<g transform="translate(${cw / 2 - 20} ${ch / 2 - 8}) scale(1.05)">` +
+    '<rect x="6" y="26" width="34" height="30" rx="8" fill="#fff"/>' +
+    finger(6, 6, 30) + finger(15, 1, 34) + finger(24, 2, 33) + finger(33, 8, 27) +
+    '<path d="M6,34 L-6,22 C-9,18 -4,14 0,17 L10,28 Z" fill="#fff"/>' +
     '</g>';
   return svg(W, H,
     stripes(W, H, ['#00953a', '#fff', '#00953a', '#fff', '#00953a', '#fff', '#00953a']) +
@@ -77,21 +79,42 @@ const somaliland = svg(600, 300,
 
 const northernCyprus = svg(900, 600,
   rect(0, 0, 900, 600, '#fff') + rect(0, 60, 900, 60, '#e30a17') + rect(0, 480, 900, 60, '#e30a17') +
-  crescent(330, 300, 105, '#e30a17', '#fff', 26, 86) + star(430, 300, 52, '#e30a17', 5, -90));
+  crescent(320, 300, 105, '#e30a17', '#fff', 28, 86) + star(470, 300, 44, '#e30a17', 5, -90));
 
-const circassia = svg(600, 400,
-  rect(0, 0, 600, 400, '#00843d') +
-  starArc(300, 210, 150, 9, 205, 335, 15, '#ffd100') +
-  star(255, 160, 15, '#ffd100') + star(300, 160, 15, '#ffd100') + star(345, 160, 15, '#ffd100') +
-  `<g stroke="#ffd100" stroke-width="7" stroke-linecap="round">` +
-  line(200, 300, 400, 300, '#ffd100', 7) + line(225, 220, 375, 360, '#ffd100', 7) + line(375, 220, 225, 360, '#ffd100', 7) + '</g>' +
-  poly([[410, 300], [390, 290], [390, 310]], '#ffd100') +
-  poly([[385, 370], [362, 362], [377, 348]], '#ffd100') +
-  poly([[215, 370], [238, 362], [223, 348]], '#ffd100'));
+const circassia = (() => {
+  const gold = '#ffd100';
+  // three arrows pointing upwards, crossing in the middle
+  const arrow = (angle: number) => {
+    const a = (angle * Math.PI) / 180;
+    const L = 72;
+    const cx = 300, cy = 290;
+    const dx = Math.sin(a), dy = -Math.cos(a);
+    const tip: [number, number] = [cx + dx * L, cy + dy * L];
+    const tail: [number, number] = [cx - dx * L, cy - dy * L];
+    const px = -dy, py = dx;
+    const head = poly([
+      [tip[0] + dx * 18, tip[1] + dy * 18],
+      [tip[0] + px * 11, tip[1] + py * 11],
+      [tip[0] - px * 11, tip[1] - py * 11],
+    ], gold);
+    const fletch = poly([
+      [tail[0], tail[1]], [tail[0] + px * 10 - dx * 16, tail[1] + py * 10 - dy * 16],
+      [tail[0] + px * 10 + dx * 4, tail[1] + py * 10 + dy * 4], [tail[0] + dx * 14, tail[1] + dy * 14],
+      [tail[0] - px * 10 + dx * 4, tail[1] - py * 10 + dy * 4], [tail[0] - px * 10 - dx * 16, tail[1] - py * 10 - dy * 16],
+    ], gold);
+    return line(tail[0], tail[1], tip[0], tip[1], gold, 7) + head + fletch;
+  };
+  return svg(600, 400,
+    rect(0, 0, 600, 400, '#00843d') +
+    starArc(300, 205, 150, 9, 205, 335, 15, gold) +
+    star(255, 158, 15, gold) + star(300, 158, 15, gold) + star(345, 158, 15, gold) +
+    arrow(-38) + arrow(0) + arrow(38));
+})();
 
 const sealand = svg(600, 400,
   poly([[0, 0], [600, 0], [0, 400]], '#c8102e') + poly([[600, 0], [600, 400], [0, 400]], '#000') +
-  '<path d="M600,0L0,400" stroke="#fff" stroke-width="90"/>');
+  // white band of constant width along the diagonal
+  poly([[525, 0], [600, 0], [600, 50], [75, 400], [0, 400], [0, 350]], '#fff'));
 
 // ---------------------------------------------------------------------------
 // Spanish autonomous communities
@@ -118,12 +141,12 @@ function greekCrossAt(cx: number, cy: number, size: number, t: number, fill: str
 
 const asturias = svg(900, 600,
   rect(0, 0, 900, 600, '#0066cc') +
-  // Cruz de la Victoria: arms widening towards the ends
-  path('M425,70H475L465,215L600,200V260L465,245L480,530H420L435,245L300,260V200L435,215Z', '#fcd116') +
-  line(330, 255, 330, 320, '#fcd116', 5) + line(570, 255, 570, 320, '#fcd116', 5) +
-  // alpha (left) and omega (right)
-  path('M330,320L295,410H315L322,390H338L345,410H365ZM326,375L330,360L334,375Z', '#fcd116') +
-  path('M540,410H560V398A32,34 0 1 1 580,398V410H600V394H592A42,42 0 1 0 548,394H540Z', '#fcd116'));
+  // Cruz de la Victoria: thick arms that widen towards the ends
+  path('M408,60H492L482,200L640,186V284L482,270L496,545H404L418,270L260,284V186L418,200Z', '#fcd116') +
+  line(300, 284, 300, 330, '#fcd116', 5) + line(600, 284, 600, 330, '#fcd116', 5) +
+  // alpha (left) and omega (right) hanging from the arms
+  path('M300,330L262,430H286L294,408H306L314,430H338ZM298,388L300,376L302,388Z', '#fcd116') +
+  path('M560,430H585V416A36,38 0 1 1 615,416V430H640V410H630A48,48 0 1 0 570,410H560Z', '#fcd116'));
 
 const baleares = svg(900, 600,
   SENYERA(900, 600) + rect(0, 0, 400, 333.3, '#6c2d85') + castle(110, 70, 180, '#fff', '#6c2d85'));
@@ -140,8 +163,7 @@ const castillaYLeon = svg(600, 600,
   lion(370, 60, 160, '#7b2f8e', '#c8102e') + lion(70, 360, 160, '#7b2f8e', '#c8102e'));
 
 const valenciana = svg(900, 600,
-  SENYERA(900, 600) + rect(0, 0, 225, 600, '#0039a6') + crown(40, 40, 145, '#fcdd09') +
-  rect(40, 110, 145, 12, '#c8102e'));
+  SENYERA(900, 600) + rect(0, 0, 225, 600, '#0039a6') + crown(40, 40, 145, '#fcdd09'));
 
 const extremadura = svg(900, 600, stripes(900, 600, ['#00a650', '#fff', '#000']));
 
@@ -154,7 +176,7 @@ const murcia = svg(900, 600,
   rect(0, 0, 900, 600, '#9b1b30') +
   castle(40, 40, 90, '#fcd116', '#9b1b30') + castle(150, 40, 90, '#fcd116', '#9b1b30') +
   castle(40, 150, 90, '#fcd116', '#9b1b30') + castle(150, 150, 90, '#fcd116', '#9b1b30') +
-  [[660, 300], [600, 370], [720, 370], [540, 440], [660, 440], [780, 440], [660, 510]]
+  [[660, 300], [560, 370], [660, 370], [760, 370], [610, 440], [710, 440], [660, 510]]
     .map(([x, y]) => crown(x - 35, y - 25, 70, '#fcd116')).join(''));
 
 const navarra = svg(900, 600,
@@ -394,7 +416,16 @@ const frisia = (() => {
     }
   }
   body = `<clipPath id="frc"><rect width="900" height="600"/></clipPath><g clip-path="url(#frc)">${body}</g>`;
-  return svg(900, 600, body + [[120, 80], [330, 200], [540, 320], [750, 440], [250, 420], [600, 120], [460, 520]].map(([x, y]) => heart(x, y)).join(''));
+  // hearts (pompeblêden) only on the white stripes
+  const hearts: [number, number][] = [];
+  for (const k of [1, 3, 5]) {
+    for (const t of [0.2, 0.5, 0.8]) {
+      const y = 600 * t;
+      const x = ((k + 0.5) * 900 / 7) * 2 - 600 + y; // centre line of stripe k
+      if (x > 30 && x < 870) hearts.push([x, y]);
+    }
+  }
+  return svg(900, 600, body + hearts.map(([x, y]) => heart(x, y)).join(''));
 })();
 
 const occitania = (() => {
@@ -413,13 +444,29 @@ const occitania = (() => {
 const scania = svg(800, 500, rect(0, 0, 800, 500, '#d8232a') + nordicCross(800, 500, '#fcd116', 280, 80));
 const cornwall = svg(1000, 600, rect(0, 0, 1000, 600, '#000') + greekCross(1000, 600, '#fff', 120));
 
-const assyria = svg(900, 600,
-  rect(0, 0, 900, 600, '#fff') +
-  `<g stroke-width="22" fill="none">` +
-  ['#0e2c8e', '#c8102e'].map((col, k) =>
-    [[0, 0], [900, 0], [0, 600], [900, 600]].map(([x, y]) => `<path d="M450,300Q${(450 + x) / 2 + (k ? 30 : -30)},${(300 + y) / 2 + (k ? -30 : 30)} ${x},${y}" stroke="${col}"/>`).join(''),
-  ).join('') + '</g>' +
-  poly(starPoints(450, 300, 130, 4, 45, 0.35), '#0e2c8e') + circle(450, 300, 55, '#fcd116'));
+const assyria = (() => {
+  const cx = 450, cy = 300;
+  // three wavy rivers (blue, white, red) from the centre to each corner
+  let rivers = '';
+  for (const [x, y] of [[0, 0], [900, 0], [0, 600], [900, 600]]) {
+    const dx = x - cx, dy = y - cy;
+    const len = Math.hypot(dx, dy);
+    const px = -dy / len, py = dx / len;
+    [[-26, '#0e2c8e'], [26, '#c8102e']].forEach(([off, col]) => {
+      const o = off as number;
+      const pts: string[] = [];
+      for (let i = 0; i <= 24; i++) {
+        const t = i / 24;
+        const w = Math.sin(t * Math.PI * 5) * 14;
+        pts.push(`${(cx + dx * t + px * (o + w)).toFixed(1)},${(cy + dy * t + py * (o + w)).toFixed(1)}`);
+      }
+      rivers += `<polyline points="${pts.join(' ')}" fill="none" stroke="${col}" stroke-width="26"/>`;
+    });
+  }
+  return svg(900, 600,
+    rect(0, 0, 900, 600, '#fff') + `<clipPath id="asc"><rect width="900" height="600"/></clipPath><g clip-path="url(#asc)">${rivers}</g>` +
+    poly(starPoints(cx, cy, 150, 4, 0, 0.3), '#5b9bd5') + circle(cx, cy, 62, '#fcd116'));
+})();
 
 const amazigh = svg(900, 600,
   stripes(900, 600, ['#0072c6', '#3a9e44', '#fcd116']) +
@@ -428,7 +475,7 @@ const amazigh = svg(900, 600,
 
 const maori = svg(900, 450,
   rect(0, 0, 900, 225, '#000') + rect(0, 225, 900, 225, '#d8232a') +
-  '<path d="M0,225H560C700,225 700,90 590,90C510,90 510,190 580,190C620,190 625,140 595,140" fill="none" stroke="#fff" stroke-width="22"/>');
+  '<path d="M900,225H340C200,225 200,90 310,90C390,90 390,190 320,190C280,190 275,140 305,140" fill="none" stroke="#fff" stroke-width="22"/>');
 
 const eastTurkestan = svg(900, 600,
   rect(0, 0, 900, 600, '#65acd8') + crescent(300, 300, 150, '#fff', '#65acd8', 40, 125) + star(390, 300, 70, '#fff', 5, -90));

@@ -112,14 +112,36 @@ Algunas banderas dibujadas a mano tienen el escudo o emblema **simplificado**
 (se indica en su ficha). Para sustituir una, deja un SVG en
 `data/flags/<id>.svg` y vuelve a ejecutar `npm run build:data`.
 
-## Modo online (siguiente fase)
+## Modo online
 
-Es viable y no hace falta un servidor propio: **Supabase** (gratis para este uso) da base de datos Postgres, usuarios y canales en tiempo real.
+Pestaña **Online** (necesita conexión):
 
-1. **Clasificación**: tabla `scores(user_id, mode, pool, score, created_at)` y una vista con el mejor resultado de cada usuario.
-2. **Reto diario**: todos juegan las mismas preguntas generadas con una semilla (la fecha). El generador aleatorio con semilla ya está en `src/lib/random.ts` (`mulberry32`).
-3. **Retos asíncronos**: guardar la semilla y el resultado; el amigo juega la misma partida cuando quiera.
-4. **1 contra 1 en tiempo real**: una sala por canal de Supabase Realtime; el servidor genera la semilla, los dos ven la misma pregunta y gana el punto quien acierta primero.
+- **Reto diario**: 10 preguntas iguales para todos cada día (el tipo cambia a diario), un solo intento y clasificación del día.
+- **Duelo en directo**: el anfitrión crea una sala con un código de 4 letras, elige el tipo de partida y las banderas; los demás entran con el código y todos juegan las mismas preguntas a la vez, viendo la puntuación de los rivales en directo. Puntúa acertar (100) y la rapidez (hasta +50).
+- **Retar a amigos**: juegas una partida, compartes el código de 6 letras y tus amigos juegan exactamente la misma cuando quieran.
+- **Clasificación**: las mejores marcas de supervivencia, contrarreloj y racha se suben solas (por tipo de test y grupo de banderas).
+
+Las partidas compartidas se generan con una semilla (`src/lib/online/seeded.ts`), así que todos ven las mismas preguntas y opciones. El servidor es **Supabase** (plan gratuito):
+
+### Configurar Supabase (una vez, ~5 minutos)
+
+1. Crea una cuenta en [supabase.com](https://supabase.com) y un proyecto nuevo (gratis).
+2. En el proyecto: **SQL Editor → New query**, pega el contenido de [`supabase/schema.sql`](supabase/schema.sql) y pulsa **Run**.
+3. En **Project Settings → API** (o *Data API*) copia la **Project URL** y la clave **anon public**.
+4. En GitHub: **Settings → Secrets and variables → Actions → New repository secret**, crea:
+   - `SUPABASE_URL` con la Project URL,
+   - `SUPABASE_ANON_KEY` con la clave anon.
+5. Vuelve a generar el APK: pestaña **Actions → Android APK → Run workflow** (o sube cualquier cambio).
+
+La clave *anon* es pública por diseño: lo que cada uno puede hacer lo limitan las reglas de seguridad (RLS) del esquema, que permiten leer y añadir resultados pero no borrar ni modificar los de otros.
+
+Para probar en local, crea un archivo `.env` con `EXPO_PUBLIC_SUPABASE_URL=…` y `EXPO_PUBLIC_SUPABASE_ANON_KEY=…`.
+
+## Actualizaciones
+
+Cada APK lleva su número de versión (el número de ejecución de GitHub Actions). En **Progreso → Actualizaciones → Buscar actualizaciones** (y con un aviso en la pantalla de inicio) la app comprueba si hay una versión más nueva en la release `apk-latest` y la descarga; se instala encima de la anterior y **no se pierde el progreso**, porque todas las versiones usan el mismo identificador y la misma firma.
+
+Para que funcione, el APK tiene que poder descargarse sin iniciar sesión, es decir, **el repositorio debe ser público** (*Settings → General → Danger Zone → Change visibility*). Es también lo que permite que tus amigos descarguen la app sin cuenta de GitHub.
 
 ## Créditos de los datos
 

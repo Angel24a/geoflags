@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { Alert, Platform, Pressable, Switch, View } from 'react-native';
 
 import { Flag } from '@/components/Flag';
+import { UpdateCard } from '@/components/UpdateCard';
 import { formatTime } from '@/components/game';
 import { Button, Card, ProgressBar, Row, Screen, SectionTitle, T } from '@/components/ui';
 import { BY_ID, CATEGORY_ORDER, CATEGORY_SHORT, ENTITIES } from '@/data';
@@ -149,6 +150,9 @@ export default function Progress() {
           <Switch value={settings.similarOptions} onValueChange={v => updateSettings({ similarOptions: v })} />
         </Row>
       </Card>
+      <View style={{ marginTop: space.md }}>
+        <UpdateCard />
+      </View>
       <Button title="Borrar progreso" kind="ghost" onPress={confirmReset} style={{ marginTop: space.lg }} />
     </Screen>
   );

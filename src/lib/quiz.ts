@@ -95,8 +95,9 @@ function clashes(a: Entity, b: Entity, c: QuizConfig): boolean {
 export function distractors(target: Entity, c: QuizConfig, pool: Entity[], o: DistractorOptions): Entity[] {
   const rng = o.rng ?? Math.random;
   const count = o.count ?? 3;
+  // distractors must also make sense for the prompt (e.g. only places with a silhouette for shape questions)
   const ok = (e: Entity, chosen: Entity[]) =>
-    e.id !== target.id && hasAttr(e, c.answer) && !clashes(e, target, c) && chosen.every(x => !clashes(x, e, c));
+    e.id !== target.id && hasAttr(e, c.answer) && hasAttr(e, c.prompt) && !clashes(e, target, c) && chosen.every(x => !clashes(x, e, c));
 
   let candidates = pool.filter(e => ok(e, []));
   // Small pools (e.g. only organisations) borrow from everything.

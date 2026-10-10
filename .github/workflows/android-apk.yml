@@ -17,6 +17,12 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    env:
+      # Shown in the app and compared by its "Buscar actualizaciones" button.
+      BUILD_NUMBER: ${{ github.run_number }}
+      # Online mode (optional): add these two repository secrets from your Supabase project.
+      EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
     steps:
       - uses: actions/checkout@v4
 
@@ -50,22 +56,28 @@ jobs:
         # arm64 covers practically every modern Android phone and halves the build time.
         run: ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a --no-daemon
 
-      - name: Rename APK
-        run: cp android/app/build/outputs/apk/release/app-release.apk geoflags.apk
+      - name: Rename APK and write version info
+        run: |
+          cp android/app/build/outputs/apk/release/app-release.apk geoflags.apk
+          NOTES=$(git log -1 --pretty=%s | head -c 200)
+          node -e 'require("fs").writeFileSync("version.json", JSON.stringify({ build: Number(process.env.BUILD_NUMBER), date: new Date().toISOString(), notes: process.argv[1] }))' "$NOTES"
+          cat version.json
 
       - uses: actions/upload-artifact@v4
         with:
           name: geoflags-apk
-          path: geoflags.apk
+          path: |
+            geoflags.apk
+            version.json
 
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          NOTES="APK generado automáticamente desde ${GITHUB_REF_NAME} (${GITHUB_SHA::7}). Descarga geoflags.apk en el móvil e instálalo."
+          NOTES="Versión ${BUILD_NUMBER}, generada desde ${GITHUB_REF_NAME} (${GITHUB_SHA::7}). Descarga geoflags.apk en el móvil e instálalo encima de la anterior: el progreso se mantiene."
           if gh release view apk-latest >/dev/null 2>&1; then
-            gh release upload apk-latest geoflags.apk --clobber
+            gh release upload apk-latest geoflags.apk version.json --clobber
             gh release edit apk-latest --notes "$NOTES"
           else
-            gh release create apk-latest geoflags.apk --prerelease --title "GeoFlags (última versión)" --notes "$NOTES" --target "$GITHUB_SHA"
+            gh release create apk-latest geoflags.apk version.json --prerelease --title "GeoFlags (última versión)" --notes "$NOTES" --target "$GITHUB_SHA"
           fi

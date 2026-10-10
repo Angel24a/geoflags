@@ -1,13 +1,14 @@
-import { memo, useCallback, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import Animated, { runOnJS, useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 import Svg, { Circle, G, Path } from 'react-native-svg';
 
 import { BY_ID } from '@/data';
-import { featureAt, locate, world } from '@/lib/geo';
+import { featureAt, features, locate, world } from '@/lib/geo';
 import { useTheme } from '@/theme';
 import { Icon, T } from './ui';
+import { geoPath } from 'd3-geo';
 
 export interface MapHighlight {
   id: string;
@@ -24,21 +25,69 @@ interface Props {
   /** Point to circle (e.g. the correct answer), as [lon, lat]. */
   pin?: [number, number] | null;
   pinColor?: string;
+  /** Territories to frame when the map opens (e.g. the countries of a chain). */
+  focus?: string[];
 }
 
-const MIN_SCALE = 1;
-const MAX_SCALE = 12;
+/** Visible part of the projected map, in projection pixels (like an SVG viewBox). */
+interface View4 {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+const MAX_ZOOM = 40;
 const DOT_TOLERANCE = 14;
 
-function WorldMapImpl({ height = 300, highlights = [], onPick, dotIds, pin, pinColor }: Props) {
+function clampView(v: View4, W: number, H: number): View4 {
+  const w = Math.min(W, Math.max(W / MAX_ZOOM, v.w));
+  const h = (w * H) / W;
+  const x = Math.min(Math.max(v.x, 0), W - w);
+  const y = Math.min(Math.max(v.y, 0), H - h);
+  return { x, y, w, h };
+}
+
+/**
+ * World map drawn as vectors. Pinch/pan move the drawing live and, when the
+ * gesture ends, the map is redrawn for the new view so it stays sharp at any
+ * zoom (scaling the rendered view would pixelate on Android).
+ */
+function WorldMapImpl({ height = 300, highlights = [], onPick, dotIds, pin, pinColor, focus }: Props) {
   const c = useTheme();
   const [width, setWidth] = useState(0);
-  const [zoom, setZoom] = useState(1);
   const onLayout = (e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width);
 
-  const w = width || 1;
-  const h = height;
-  const { shapes, proj, sphere } = useMemo(() => world(w, h), [w, h]);
+  const W = width || 1;
+  const H = height;
+  const { shapes, proj, sphere } = useMemo(() => world(W, H), [W, H]);
+  const full: View4 = useMemo(() => ({ x: 0, y: 0, w: W, h: H }), [W, H]);
+
+  const focusView = useMemo(() => {
+    if (!focus?.length || width === 0) return full;
+    const path = geoPath(proj);
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const id of focus) {
+      const f = features().get(id);
+      const ll = locate(id);
+      const pts: [number, number][] = f ? (path.bounds(f) as [number, number][]) : ll ? [proj(ll) as [number, number]] : [];
+      for (const [x, y] of pts) {
+        x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y);
+      }
+    }
+    if (!Number.isFinite(x0)) return full;
+    const pad = 0.25;
+    let w = (x1 - x0) * (1 + pad * 2);
+    let h = (y1 - y0) * (1 + pad * 2);
+    // keep the aspect ratio of the view
+    if (w / h < W / H) w = (h * W) / H;
+    else h = (w * H) / W;
+    return clampView({ x: (x0 + x1) / 2 - w / 2, y: (y0 + y1) / 2 - h / 2, w, h }, W, H);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focus?.join(','), width, proj]);
+
+  const [view, setView] = useState<View4>(full);
+  useEffect(() => setView(focusView), [focusView]);
 
   // Small territories get a dot so they can be seen and tapped.
   const dots = useMemo(() => {
@@ -54,53 +103,75 @@ function WorldMapImpl({ height = 300, highlights = [], onPick, dotIds, pin, pinC
 
   const hl = useMemo(() => new Map(highlights.map(x => [x.id, x.color])), [highlights]);
 
-  // Transform state
+  // Live gesture transform, folded into `view` when the gesture ends.
   const scale = useSharedValue(1);
-  const savedScale = useSharedValue(1);
   const tx = useSharedValue(0);
   const ty = useSharedValue(0);
-  const savedTx = useSharedValue(0);
-  const savedTy = useSharedValue(0);
+  const startScale = useSharedValue(1);
+  const startTx = useSharedValue(0);
+  const startTy = useSharedValue(0);
 
-  const clamp = (v: number, lo: number, hi: number) => {
-    'worklet';
-    return Math.min(hi, Math.max(lo, v));
-  };
+  /** Screen point → point in the current view's projection coordinates. */
+  const toProjected = useCallback(
+    (sx: number, sy: number, s = 1, dx = 0, dy = 0): [number, number] => {
+      // undo the live transform (origin is the centre of the view)
+      const vx = W / 2 + (sx - W / 2 - dx) / s;
+      const vy = H / 2 + (sy - H / 2 - dy) / s;
+      const k = view.w / W;
+      return [view.x + vx * k, view.y + vy * k];
+    },
+    [view, W, H],
+  );
+
+  const commit = useCallback(
+    (s: number, dx: number, dy: number) => {
+      // the screen's top-left corner and new width, in projection coordinates
+      const [x, y] = toProjected(0, 0, s, dx, dy);
+      setView(clampView({ x, y, w: view.w / s, h: view.h / s }, W, H));
+      scale.value = 1;
+      tx.value = 0;
+      ty.value = 0;
+    },
+    [toProjected, view, W, H, scale, tx, ty],
+  );
 
   const pinch = Gesture.Pinch()
+    .onStart(() => {
+      startScale.value = scale.value;
+    })
     .onUpdate(e => {
-      scale.value = clamp(savedScale.value * e.scale, MIN_SCALE, MAX_SCALE);
+      scale.value = Math.max(0.5, Math.min(8, startScale.value * e.scale));
     })
     .onEnd(() => {
-      savedScale.value = scale.value;
+      runOnJS(commit)(scale.value, tx.value, ty.value);
     });
 
   const pan = Gesture.Pan()
     .minDistance(4)
+    .averageTouches(true)
+    .onStart(() => {
+      startTx.value = tx.value;
+      startTy.value = ty.value;
+    })
     .onUpdate(e => {
-      const maxX = (w * (scale.value - 1)) / 2;
-      const maxY = (h * (scale.value - 1)) / 2;
-      tx.value = clamp(savedTx.value + e.translationX, -maxX, maxX);
-      ty.value = clamp(savedTy.value + e.translationY, -maxY, maxY);
+      tx.value = startTx.value + e.translationX;
+      ty.value = startTy.value + e.translationY;
     })
     .onEnd(() => {
-      savedTx.value = tx.value;
-      savedTy.value = ty.value;
+      runOnJS(commit)(scale.value, tx.value, ty.value);
     });
 
   const handleTap = useCallback(
-    (x: number, y: number) => {
+    (sx: number, sy: number) => {
       if (!onPick) return;
-      const s = scale.value;
-      // undo the transform (origin is the centre of the view)
-      const cx = w / 2 + (x - w / 2 - tx.value) / s;
-      const cy = h / 2 + (y - h / 2 - ty.value) / s;
-      const ll = proj.invert?.([cx, cy]);
+      const [px, py] = toProjected(sx, sy);
+      const ll = proj.invert?.([px, py]);
       if (!ll || Number.isNaN(ll[0])) return;
+      const k = view.w / W;
       let best: string | null = null;
-      let bestD = DOT_TOLERANCE / s;
+      let bestD = DOT_TOLERANCE * k;
       for (const d of dots) {
-        const dist = Math.hypot(d.x - cx, d.y - cy);
+        const dist = Math.hypot(d.x - px, d.y - py);
         if (dist < bestD) {
           bestD = dist;
           best = d.id;
@@ -108,7 +179,7 @@ function WorldMapImpl({ height = 300, highlights = [], onPick, dotIds, pin, pinC
       }
       onPick(best ?? featureAt(ll as [number, number]), ll as [number, number]);
     },
-    [onPick, w, h, proj, dots, scale, tx, ty],
+    [onPick, toProjected, proj, dots, view, W],
   );
 
   const tap = Gesture.Tap()
@@ -122,33 +193,26 @@ function WorldMapImpl({ height = 300, highlights = [], onPick, dotIds, pin, pinC
     transform: [{ translateX: tx.value }, { translateY: ty.value }, { scale: scale.value }],
   }));
 
-  const setScale = (next: number) => {
-    const s = clamp(next, MIN_SCALE, MAX_SCALE);
-    const k = s / scale.value;
-    scale.value = withTiming(s);
-    savedScale.value = s;
-    const maxX = (w * (s - 1)) / 2;
-    const maxY = (h * (s - 1)) / 2;
-    tx.value = withTiming(clamp(tx.value * k, -maxX, maxX));
-    ty.value = withTiming(clamp(ty.value * k, -maxY, maxY));
-    savedTx.value = clamp(tx.value * k, -maxX, maxX);
-    savedTy.value = clamp(ty.value * k, -maxY, maxY);
-    setZoom(s);
+  const zoomBy = (factor: number) => {
+    const w = view.w / factor;
+    const h = view.h / factor;
+    setView(clampView({ x: view.x + (view.w - w) / 2, y: view.y + (view.h - h) / 2, w, h }, W, H));
   };
 
+  // keep strokes and dots the same size on screen whatever the zoom
+  const k = view.w / W;
   const pinPoint = pin ? proj(pin) : null;
-  const strokeW = 0.5;
 
   return (
     <View onLayout={onLayout} style={[styles.wrap, { height, backgroundColor: c.ocean, borderColor: c.border }]}>
       {width > 0 && (
         <GestureDetector gesture={gesture}>
-          <Animated.View style={[{ width: w, height: h }, animated]}>
-            <Svg width={w} height={h}>
+          <Animated.View style={[{ width: W, height: H }, animated]}>
+            <Svg width={W} height={H} viewBox={`${view.x} ${view.y} ${view.w} ${view.h}`}>
               <Path d={sphere} fill={c.ocean} />
               <G>
                 {shapes.map(s => (
-                  <Path key={s.id} d={s.d} fill={hl.get(s.id) ?? c.land} stroke={c.landStroke} strokeWidth={strokeW / zoom} />
+                  <Path key={s.id} d={s.d} fill={hl.get(s.id) ?? c.land} stroke={c.landStroke} strokeWidth={0.6 * k} />
                 ))}
               </G>
               {dots.map(d => (
@@ -156,20 +220,20 @@ function WorldMapImpl({ height = 300, highlights = [], onPick, dotIds, pin, pinC
                   key={d.id}
                   cx={d.x}
                   cy={d.y}
-                  r={(hl.has(d.id) ? 4 : 2.2) / Math.sqrt(zoom)}
+                  r={(hl.has(d.id) ? 4 : 2.2) * k}
                   fill={hl.get(d.id) ?? c.textSecondary}
                   opacity={hl.has(d.id) ? 1 : 0.35}
                 />
               ))}
-              {pinPoint && <Circle cx={pinPoint[0]} cy={pinPoint[1]} r={9 / zoom} fill="none" stroke={pinColor ?? c.text} strokeWidth={2 / zoom} />}
+              {pinPoint && <Circle cx={pinPoint[0]} cy={pinPoint[1]} r={9 * k} fill="none" stroke={pinColor ?? c.text} strokeWidth={2 * k} />}
             </Svg>
           </Animated.View>
         </GestureDetector>
       )}
       <View style={styles.zoomButtons}>
-        <ZoomButton label="+" onPress={() => setScale(scale.value * 2)} />
-        <ZoomButton label="−" onPress={() => setScale(scale.value / 2)} />
-        <ZoomButton icon onPress={() => { setScale(1); tx.value = withTiming(0); ty.value = withTiming(0); savedTx.value = 0; savedTy.value = 0; }} />
+        <ZoomButton label="+" onPress={() => zoomBy(2)} />
+        <ZoomButton label="−" onPress={() => zoomBy(0.5)} />
+        <ZoomButton icon onPress={() => setView(v => (v.w >= W - 0.5 ? focusView : full))} />
       </View>
     </View>
   );

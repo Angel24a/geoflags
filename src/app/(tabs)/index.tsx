@@ -4,6 +4,8 @@ import { View } from 'react-native';
 import { Flag } from '@/components/Flag';
 import { Card, Icon, Row, Screen, SectionTitle, T, type IconName } from '@/components/ui';
 import { describePool } from '@/lib/pool';
+import { useAvailableUpdate } from '@/lib/updates';
+import { Linking } from 'react-native';
 import type { Attr, Rule } from '@/lib/quiz';
 import { useApp } from '@/state/app-state';
 import { space, useTheme } from '@/theme';
@@ -43,6 +45,7 @@ export default function Home() {
   const c = useTheme();
   const { settings, poolEntities } = useApp();
   const sample = poolEntities.slice(0, 3);
+  const update = useAvailableUpdate();
 
   const startQuiz = (q: { prompt: Attr; answer: Attr; rule?: Rule }) =>
     router.push({
@@ -56,6 +59,13 @@ export default function Home() {
         <T variant="title">GeoFlags</T>
         <T muted>Aprende las banderas del mundo</T>
       </View>
+
+      {update && (
+        <Card onPress={() => Linking.openURL(update.apk)} style={{ marginTop: space.lg, backgroundColor: c.accentSoft, borderColor: c.accent }}>
+          <T variant="label" color={c.accent}>Nueva versión disponible ({update.build})</T>
+          <T variant="caption" muted>Toca para descargarla e instalarla encima. Tu progreso se mantiene.</T>
+        </Card>
+      )}
 
       <Card onPress={() => router.push('/pool')} style={{ marginTop: space.xl }}>
         <Row style={{ justifyContent: 'space-between' }}>

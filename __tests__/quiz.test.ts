@@ -62,3 +62,13 @@ describe('quiz engine', () => {
     expect(de).toBeGreaterThan(130);
   });
 });
+
+describe('distractors for shape questions', () => {
+  it('only offers places that have a silhouette', () => {
+    const cfg: QuizConfig = { prompt: 'shape', answer: 'name', input: 'choice' };
+    for (const id of ['nz', 'au', 'es']) {
+      const d = distractors(BY_ID.get(id)!, cfg, ENTITIES, { similar: true, rng: mulberry32(9) });
+      expect(d.every(e => e.geo === 'shape')).toBe(true);
+    }
+  });
+});

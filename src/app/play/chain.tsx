@@ -27,8 +27,9 @@ export default function Chain() {
 
   const current = path[path.length - 1];
   const won = current === puzzle.target.id;
-  const steps = path.length - 1;
-  const optimal = puzzle.optimal.length - 1;
+  // count the countries the player has to name (everything between start and destination)
+  const steps = path.filter(id => id !== puzzle.start.id && id !== puzzle.target.id).length;
+  const optimal = puzzle.optimal.length - 2;
 
   const submit = (text: string, picked?: Entity) => {
     const e = picked ?? candidates.find(x => x.name.toLowerCase() === text.trim().toLowerCase());
@@ -36,11 +37,12 @@ export default function Chain() {
     if (!areNeighbors(current, e.id)) return setMessage(`${e.name} no limita con ${BY_ID.get(current)!.name}`);
     setMessage(null);
     setHint(false);
-    const next = [...path, e.id];
+    // Reaching a neighbour of the destination completes the chain: the last hop is automatic.
+    const next = e.id !== puzzle.target.id && areNeighbors(e.id, puzzle.target.id) ? [...path, e.id, puzzle.target.id] : [...path, e.id];
     setPath(next);
-    if (e.id === puzzle.target.id) {
+    if (next[next.length - 1] === puzzle.target.id) {
       recordAnswer(puzzle.target.id, true);
-      submitRecord(`chain:${JSON.stringify(settings.pool)}`, Math.max(0, 10 - (next.length - 1 - optimal)));
+      submitRecord(`chain:${JSON.stringify(settings.pool)}`, Math.max(0, 10 - (next.length - 2 - optimal)));
     }
   };
 
@@ -60,7 +62,7 @@ export default function Chain() {
   return (
     <Screen edges={[]}>
       <Stack.Screen options={{ title: 'Cadena de vecinos' }} />
-      <GameBar left={<T variant="label" muted>Pasos: {steps}</T>} right={<T variant="label" muted>Mínimo posible: {optimal}</T>} />
+      <GameBar left={<T variant="label" muted>Países: {steps}</T>} right={<T variant="label" muted>Mínimo posible: {optimal}</T>} />
 
       <Row gap={space.md} style={{ marginTop: space.sm }}>
         <Card style={{ flex: 1, alignItems: 'center', gap: 6 }}>
@@ -77,7 +79,8 @@ export default function Chain() {
 
       <View style={{ marginTop: space.md }}>
         <WorldMap
-          height={200}
+          height={240}
+          focus={[puzzle.start.id, puzzle.target.id, ...puzzle.optimal]}
           highlights={[
             ...shown.map(id => ({ id, color: c.accent })),
             { id: puzzle.start.id, color: c.warning },
@@ -95,14 +98,14 @@ export default function Chain() {
       {won || gaveUp ? (
         <Card style={{ marginTop: space.lg, gap: space.sm }}>
           <T variant="heading" color={won ? c.success : c.text}>
-            {won ? (steps === optimal ? '¡Perfecto! Camino más corto' : `¡Llegaste en ${steps} pasos!`) : 'Un camino más corto'}
+            {won ? (steps === optimal ? '¡Perfecto! Camino más corto' : `¡Lo lograste con ${steps} países!`) : 'Un camino más corto'}
           </T>
-          {won && steps > optimal && <T muted>El camino más corto tenía {optimal}: {puzzle.optimal.map(id => BY_ID.get(id)!.name).join(' → ')}</T>}
+          {won && steps > optimal && <T muted>El camino más corto necesitaba {optimal}: {puzzle.optimal.map(id => BY_ID.get(id)!.name).join(' → ')}</T>}
           <Button title="Otra cadena" onPress={newPuzzle} />
         </Card>
       ) : (
         <View style={{ marginTop: space.md, gap: space.sm }}>
-          <T variant="caption" muted>Escribe un país que limite con {BY_ID.get(current)!.name}</T>
+          <T variant="caption" muted>Escribe un país que limite con {BY_ID.get(current)!.name}. Cuando llegues a un vecino de {puzzle.target.name}, la cadena se completa sola.</T>
           <EntityInput candidates={candidates} onSubmit={submit} placeholder="País vecino" />
           {message && <T variant="caption" color={c.error}>{message}</T>}
           {hint && (

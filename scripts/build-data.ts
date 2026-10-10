@@ -19,6 +19,7 @@ import { geoCentroid } from 'd3-geo';
 import type { Feature, FeatureCollection, Geometry, MultiPolygon, Polygon } from 'geojson';
 
 import { BASE_FLAG_OVERRIDES, EXTRAS } from '../data/extras';
+import { mainPartShare, silhouetteFill } from '../src/lib/shape';
 import { ALIASES, CAPITALS_ES, NAME_OVERRIDES } from '../data/spanish';
 import type { Bands, Category, ColorKey, Continent, Entity } from '../src/data/types';
 
@@ -420,6 +421,18 @@ function haversine([lat1, lon1]: [number, number], [lat2, lon2]: [number, number
   return 2 * R * Math.asin(Math.sqrt(a));
 }
 
+/**
+ * Territories whose Natural Earth outline does not match the usual silhouette
+ * (most of Western Sahara is drawn as part of Morocco).
+ */
+const NO_SILHOUETTE = new Set(['eh']);
+
+const polysOf = (g: Geometry): number[][][][] =>
+  g.type === 'Polygon' ? [g.coordinates] : g.type === 'MultiPolygon' ? g.coordinates : [];
+
+/** Scattered archipelagos (most land outside the main island and little of the frame filled). */
+const isScattered = (q?: { fill: number; share: number }) => !q || q.fill < 0.03 || (q.share < 0.25 && q.fill < 0.1);
+
 /** Douglas–Peucker on a closed ring: simplify both halves so the endpoints differ. */
 function simplifyRing(ring: number[][], eps: number): number[][] {
   if (ring.length < 8) return ring;
@@ -462,13 +475,19 @@ function simplifyFeature(g: Geometry): Geometry {
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   for (const p of polys) for (const [x, y] of p[0]) { minX = Math.min(minX, x); maxX = Math.max(maxX, x); minY = Math.min(minY, y); maxY = Math.max(maxY, y); }
   const diag = Math.hypot(maxX - minX, maxY - minY);
-  const eps = Math.min(0.12, Math.max(0.002, diag * 0.0025));
+  const eps = Math.min(0.05, Math.max(0.001, diag * 0.0012));
   const out: number[][][][] = [];
   for (const p of polys) {
-    const outer = simplifyRing(p[0], eps);
+    // small islands get a proportionally finer tolerance so they keep their outline
+    const ringEps = (r: number[][]) => {
+      let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+      for (const [x, y] of r) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
+      return Math.min(eps, Math.max(0.0004, Math.hypot(x1 - x0, y1 - y0) * 0.006));
+    };
+    const outer = simplifyRing(p[0], ringEps(p[0]));
     // drop specks smaller than the simplification tolerance
     if (outer.length < 4 || ringArea(outer) < eps * eps * 0.5) continue;
-    const holes = p.slice(1).map(r => simplifyRing(r, eps)).filter(r => r.length >= 4 && ringArea(r) > eps * eps * 0.5);
+    const holes = p.slice(1).map(r => simplifyRing(r, ringEps(r))).filter(r => r.length >= 4 && ringArea(r) > eps * eps * 0.5);
     out.push([outer, ...holes]);
   }
   return { type: 'MultiPolygon', coordinates: out };
@@ -482,7 +501,10 @@ function buildGeo(entities: Draft[]) {
     const m = new Map<string, Feature<Polygon | MultiPolygon, { name: string }>>();
     for (const f of fc.features) {
       const key = f.id != null ? ccn3ToId.get(String(f.id)) : undefined;
-      m.set(key ?? f.properties.name, f);
+      const k = key ?? f.properties.name;
+      const prev = m.get(k);
+      // Several features can share a code (Australia and Ashmore and Cartier Is.): merge them.
+      m.set(k, prev ? { ...prev, geometry: { type: 'MultiPolygon', coordinates: [...polysOf(prev.geometry), ...polysOf(f.geometry)] } } : f);
     }
     // features without an ISO code (Somaliland, Kosovo…) are matched by name
     for (const d of entities) {
@@ -499,8 +521,7 @@ function buildGeo(entities: Draft[]) {
   const areaOf = new Map(entities.map(e => [e.id, e.area ?? 0]));
 
   // Carve overseas territories out of their parent geometry.
-  const polys = (g: Geometry): number[][][][] =>
-    g.type === 'Polygon' ? [g.coordinates] : g.type === 'MultiPolygon' ? g.coordinates : [];
+  const polys = polysOf;
   const carve = (byKey: Map<string, Feature<Polygon | MultiPolygon, { name: string }>>) => {
     const parents = new Set(Object.values(CARVE));
     for (const parentKey of parents) {
@@ -534,7 +555,7 @@ function buildGeo(entities: Draft[]) {
   carve(fine);
   for (const [k, f] of fine) {
     const a = areaOf.get(k);
-    if (!byKey.has(k) || (a !== undefined && a < 60000) || ['somaliland', 'northern-cyprus', 'xk'].includes(k)) byKey.set(k, f);
+    if (!byKey.has(k) || (a !== undefined && a < 200000) || ['somaliland', 'northern-cyprus', 'xk'].includes(k)) byKey.set(k, f);
   }
   // carved territories are small: take them from the detailed map
   for (const id of Object.keys(CARVE)) if (fine.has(id)) byKey.set(id, fine.get(id)!);
@@ -549,7 +570,8 @@ function buildGeo(entities: Draft[]) {
   }
   for (const f of out) f.geometry = simplifyFeature(f.geometry);
   const topo = topology({ countries: { type: 'FeatureCollection', features: out } as FeatureCollection });
-  return { topo: quantize(topo as never, 5e4), has };
+  const quality = new Map(out.map(f => [String(f.id), { fill: silhouetteFill(f), share: mainPartShare(f.geometry) }]));
+  return { topo: quantize(topo as never, 1e5), has, quality };
 }
 
 // ---------------------------------------------------------------------------
@@ -591,7 +613,7 @@ for (const a of list) {
   similar.set(a, scored.filter(x => x.s >= 2).slice(0, 15).map(x => x.b));
 }
 
-const { topo, has } = buildGeo(drafts);
+const { topo, has, quality } = buildGeo(drafts);
 
 const entities: Entity[] = drafts
   .map(({ svgRaw: _svg, geoName: _g, ...d }) => {
@@ -605,8 +627,12 @@ const entities: Entity[] = drafts
       bands: f.bands,
       symH: f.symH,
       symV: f.symV,
-      // below ~250 km² the silhouette is not recognisable at this resolution
-      geo: has.has(d.id) ? ((d.area ?? Infinity) < 250 ? 'tiny' : 'shape') : d.base && d.latlng ? 'marker' : null,
+      // tiny territories and scattered archipelagos are not recognisable as a silhouette
+      geo: has.has(d.id)
+        ? (d.area ?? Infinity) < 1000 || isScattered(quality.get(d.id)) || NO_SILHOUETTE.has(d.id)
+          ? 'tiny'
+          : 'shape'
+        : d.base && d.latlng ? 'marker' : null,
     } satisfies Entity;
   })
   .sort((a, b) => a.name.localeCompare(b.name, 'es'));

@@ -7,6 +7,7 @@ import { feature } from 'topojson-client';
 
 import geoTopo from '@/data/generated/geo.json';
 import { BY_ID } from '@/data';
+import { silhouette } from './shape';
 
 type F = Feature<Geometry>;
 let featureCache: Map<string, F> | null = null;
@@ -32,8 +33,9 @@ export function locate(id: string): [number, number] | null {
 
 /** Path of a single territory, centred with an equal-area projection and fitted into w×h. */
 export function shapePath(id: string, w: number, h: number, pad = 4): string | null {
-  const f = features().get(id);
-  if (!f) return null;
+  const full = features().get(id);
+  if (!full) return null;
+  const f = silhouette(full);
   const [lon, lat] = geoCentroid(f);
   const proj = geoAzimuthalEqualArea().rotate([-lon, -lat]).fitExtent([[pad, pad], [w - pad, h - pad]], f);
   return geoPath(proj)(f);

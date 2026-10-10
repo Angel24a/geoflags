@@ -60,7 +60,9 @@ export function makeChain(pool: Entity[], rng: Rng = Math.random, minSteps = 2, 
   const g = graph();
   const nodes = pool.filter(e => g.has(e.id));
   for (const start of shuffle(nodes, rng).slice(0, 60)) {
-    const targets = shuffle(nodes, rng);
+    // prefer a destination on the same continent: shorter, more familiar chains
+    const shuffled = shuffle(nodes, rng);
+    const targets = [...shuffled.filter(e => e.continent === start.continent), ...shuffled.filter(e => e.continent !== start.continent)];
     for (const target of targets.slice(0, 40)) {
       const p = shortestPath(start.id, target.id);
       if (p && p.length - 1 >= minSteps && p.length - 1 <= maxSteps) return { start, target, optimal: p };

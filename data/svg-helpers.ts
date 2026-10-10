@@ -116,21 +116,39 @@ export function unionJack(id: string, x = 0, y = 0, w = 60, h = 30) {
 </g></g>`;
 }
 
-/** Hammer and sickle in a 100×100 box, placed at (x, y) with the given size. */
+/** Rectangle of the given width centred on the segment p→q, as a polygon. */
+function bar(p: Pt, q: Pt, width: number, fill: string) {
+  const dx = q[0] - p[0], dy = q[1] - p[1];
+  const len = Math.hypot(dx, dy);
+  const nx = (-dy / len) * (width / 2), ny = (dx / len) * (width / 2);
+  return poly([[p[0] + nx, p[1] + ny], [q[0] + nx, q[1] + ny], [q[0] - nx, q[1] - ny], [p[0] - nx, p[1] - ny]], fill);
+}
+
+/**
+ * Hammer and sickle (as on the Soviet flag) in a 100×100 box: the sickle's
+ * handle at the lower left, its blade sweeping round the right and over the
+ * top; the hammer from lower right to a head at the upper left.
+ */
 export function hammerSickle(x: number, y: number, size: number, fill: string) {
-  const c: Pt = [55, 45];
-  const R = 35;
-  const r = 26;
-  const at = (rad: number, deg: number): Pt => [
-    c[0] + rad * Math.cos((deg * Math.PI) / 180),
-    c[1] + rad * Math.sin((deg * Math.PI) / 180),
-  ];
-  const [o1, o2, i1, i2] = [at(R, -40), at(R, 135), at(r, -40), at(r, 135)];
-  const blade = `M${n(o1[0])},${n(o1[1])}A${R},${R} 0 0 0 ${n(o2[0])},${n(o2[1])}L${n(i2[0])},${n(i2[1])}A${r},${r} 0 0 1 ${n(i1[0])},${n(i1[1])}Z`;
-  const handleSickle = poly([[o2[0] - 3, o2[1] - 3], [o2[0] - 17, o2[1] + 11], [o2[0] - 11, o2[1] + 17], [i2[0] + 3, i2[1] + 3]], fill);
-  const hammerHandle = poly([[80, 92], [86, 86], [44, 44], [38, 50]], fill);
-  const hammerHead = poly([[22, 44], [40, 26], [48, 34], [30, 52]], fill);
-  return `<g transform="translate(${x} ${y}) scale(${size / 100})">${path(blade, fill)}${handleSickle}${hammerHandle}${hammerHead}</g>`;
+  const c: Pt = [54, 47];
+  const R = 34;
+  const outer: Pt[] = [];
+  const inner: Pt[] = [];
+  const from = 125, to = -150; // degrees, screen coordinates (y down)
+  const N = 40;
+  for (let i = 0; i <= N; i++) {
+    const t = i / N;
+    const a = ((from + (to - from) * t) * Math.PI) / 180;
+    const r = R - 9 + 9 * t * t; // blade narrows to a point at the tip
+    outer.push([c[0] + R * Math.cos(a), c[1] + R * Math.sin(a)]);
+    inner.push([c[0] + r * Math.cos(a), c[1] + r * Math.sin(a)]);
+  }
+  const blade = poly([...outer, ...inner.reverse()], fill);
+  const h0: Pt = [c[0] + (R - 4.5) * Math.cos((from * Math.PI) / 180), c[1] + (R - 4.5) * Math.sin((from * Math.PI) / 180)];
+  const handle = bar(h0, [h0[0] - 13, h0[1] + 13], 9, fill);
+  const hammerHandle = bar([84, 90], [36, 42], 9, fill);
+  const hammerHead = bar([22, 52], [44, 30], 14, fill);
+  return `<g transform="translate(${x} ${y}) scale(${size / 100})">${blade}${handle}${hammerHandle}${hammerHead}</g>`;
 }
 
 /** Simple castle (three towers) in a 100×100 box. */
@@ -147,15 +165,28 @@ export function castle(x: number, y: number, size: number, fill: string, door = 
   return `<g transform="translate(${x} ${y}) scale(${size / 100})">${body}</g>`;
 }
 
-/** Stylised rampant lion facing the hoist side (left), 100×100 box. */
+/** Stylised rampant lion facing the hoist (left), 100×100 box. */
 export function lion(x: number, y: number, size: number, fill: string, accent?: string) {
-  const d =
-    'M30,22 C30,10 46,6 52,14 C56,8 64,10 62,18 L58,24 C66,26 70,34 68,44 C76,46 84,54 80,62 ' +
-    'C88,70 84,84 74,88 L78,96 L64,96 L62,86 C56,88 48,88 44,84 L40,96 L26,96 L32,80 ' +
-    'C26,72 26,62 32,56 L22,52 L16,40 L24,42 L30,48 L36,44 L28,36 L20,34 L22,28 Z ' +
-    'M80,62 C92,56 96,44 90,34 C96,40 98,54 88,64 Z';
-  const tongue = accent ? path('M30,22 L22,24 L28,27 Z', accent) : '';
-  return `<g transform="translate(${x} ${y}) scale(${size / 100})">${path(d, fill)}${tongue}</g>`;
+  const pts: [number, number][] = [
+    [12, 18], [16, 12], [24, 8], [30, 3], [33, 9],
+    // mane
+    [40, 5], [39, 12], [47, 11], [43, 18], [51, 19], [45, 24], [52, 29], [47, 32],
+    // back and rump
+    [56, 42], [64, 52], [70, 62],
+    // hind legs
+    [74, 74], [84, 85], [92, 96], [78, 96], [68, 83], [60, 77], [53, 85], [48, 96], [34, 96], [42, 81], [44, 69],
+    // belly and lower front paw
+    [42, 59], [31, 61], [21, 71], [14, 67], [26, 55], [33, 48],
+    // upper front paw
+    [25, 42], [10, 41], [7, 35], [24, 34],
+    // neck, jaw and open mouth
+    [30, 31], [22, 29], [15, 27], [19, 24], [11, 22],
+  ];
+  const body = 'M' + pts.map(p => p.join(',')).join('L') + 'Z';
+  const tail = 'M68,60 C80,62 88,54 88,42 C88,34 86,28 90,22 L96,16 L95,26 L99,28 L93,30 C91,36 94,46 92,52 C88,64 78,70 68,68 Z';
+  const tongue = accent ? path('M15,27 L6,27 L12,24 Z', accent) : '';
+  const claws = accent ? path('M7,35 L2,33 L5,38 Z M14,67 L9,71 L15,70 Z', accent) : '';
+  return `<g transform="translate(${x} ${y}) scale(${size / 100})">${path(body + tail, fill)}${tongue}${claws}</g>`;
 }
 
 /** Simple open crown, 100×60 box. */

@@ -2,6 +2,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
 import { ALL, filterPool, type PoolFilter } from '@/lib/pool';
+import { rankedKey, submitScore } from '@/lib/online/api';
+import { onlineConfigured } from '@/lib/online/client';
+import type { GameResult } from '@/lib/online/seeded';
 import type { Entity } from '@/data/types';
 
 export interface Settings {
@@ -22,16 +25,38 @@ export interface EntityStat {
   t: number;
 }
 
+export interface Profile {
+  /** Random id that identifies this phone online. */
+  id: string;
+  /** Name shown to friends ('' until chosen). */
+  name: string;
+}
+
 interface Persisted {
   settings: Settings;
   stats: Record<string, EntityStat>;
   records: Record<string, number>;
+  profile: Profile;
+  /** Daily challenge results by day (YYYY-MM-DD). */
+  daily: Record<string, GameResult>;
+}
+
+/** RFC 4122 v4 id (crypto.randomUUID is not available everywhere in React Native). */
+export function uuid(): string {
+  const c = globalThis.crypto as Crypto | undefined;
+  if (c?.randomUUID) return c.randomUUID();
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, ch => {
+    const r = (Math.random() * 16) | 0;
+    return (ch === 'x' ? r : (r & 0x3) | 0x8).toString(16);
+  });
 }
 
 const DEFAULT: Persisted = {
   settings: { pool: ALL, realRatio: true, similarOptions: true },
   stats: {},
   records: {},
+  profile: { id: '', name: '' },
+  daily: {},
 };
 
 const KEY = 'geoflags:v1';
@@ -44,6 +69,8 @@ interface AppState extends Persisted {
   /** Saves a score if it beats the previous record. Returns true when it is a new record. */
   submitRecord: (key: string, score: number, lowerIsBetter?: boolean) => boolean;
   resetProgress: () => void;
+  setProfileName: (name: string) => void;
+  saveDaily: (day: string, r: GameResult) => void;
 }
 
 const Ctx = createContext<AppState | null>(null);
@@ -62,10 +89,15 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           settings: { ...DEFAULT.settings, ...parsed.settings },
           stats: parsed.stats ?? {},
           records: parsed.records ?? {},
+          profile: parsed.profile?.id ? parsed.profile : { id: uuid(), name: '' },
+          daily: parsed.daily ?? {},
         });
       })
       .catch(() => {})
-      .finally(() => setReady(true));
+      .finally(() => {
+        setData(d => (d.profile.id ? d : { ...d, profile: { ...d.profile, id: uuid() } }));
+        setReady(true);
+      });
   }, []);
 
   // Debounced persistence.
@@ -88,13 +120,27 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const recordsRef = useRef(data.records);
-  recordsRef.current = data.records;
+  const dataRef = useRef(data);
+  dataRef.current = data;
   const submitRecord = useCallback((key: string, score: number, lowerIsBetter = false) => {
-    const prev = recordsRef.current[key];
+    const { records, profile, settings } = dataRef.current;
+    const prev = records[key];
     const better = prev === undefined || (lowerIsBetter ? score < prev : score > prev);
-    if (better) setData(d => ({ ...d, records: { ...d.records, [key]: score } }));
+    if (better) {
+      setData(d => ({ ...d, records: { ...d.records, [key]: score } }));
+      // personal bests of the solo challenges also go to the online leaderboard
+      const ranked = rankedKey(key, settings.pool);
+      if (ranked && onlineConfigured && profile.name && score > 0) submitScore(profile.id, ranked, score).catch(() => {});
+    }
     return better && prev !== undefined;
+  }, []);
+
+  const setProfileName = useCallback((name: string) => {
+    setData(d => ({ ...d, profile: { ...d.profile, name } }));
+  }, []);
+
+  const saveDaily = useCallback((day: string, r: GameResult) => {
+    setData(d => ({ ...d, daily: { ...d.daily, [day]: r } }));
   }, []);
 
   const resetProgress = useCallback(() => setData(d => ({ ...d, stats: {}, records: {} })), []);
@@ -102,8 +148,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const poolEntities = useMemo(() => filterPool(data.settings.pool), [data.settings.pool]);
 
   const value = useMemo<AppState>(
-    () => ({ ...data, ready, poolEntities, updateSettings, recordAnswer, submitRecord, resetProgress }),
-    [data, ready, poolEntities, updateSettings, recordAnswer, submitRecord, resetProgress],
+    () => ({ ...data, ready, poolEntities, updateSettings, recordAnswer, submitRecord, resetProgress, setProfileName, saveDaily }),
+    [data, ready, poolEntities, updateSettings, recordAnswer, submitRecord, resetProgress, setProfileName, saveDaily],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
