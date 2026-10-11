@@ -91,7 +91,7 @@ export function Button({
 }: { title: string; onPress?: () => void; kind?: ButtonKind; disabled?: boolean; style?: StyleProp<ViewStyle>; icon?: ReactNode }) {
   const c = useTheme();
   const bg = kind === 'primary' ? c.accent : kind === 'secondary' ? c.surfaceAlt : 'transparent';
-  const fg = kind === 'primary' ? '#fff' : kind === 'secondary' ? c.text : c.accent;
+  const fg = kind === 'primary' ? c.onAccent : kind === 'secondary' ? c.text : c.accent;
   return (
     <Pressable
       onPress={onPress}

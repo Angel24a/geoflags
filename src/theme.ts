@@ -7,8 +7,11 @@ const light = {
   text: '#16171A',
   textSecondary: '#6A6C72',
   border: '#E3E3DE',
-  accent: '#2F6FEB',
-  accentSoft: '#E4ECFD',
+  // dark purple, as in the app icon
+  accent: '#5B21B6',
+  accentSoft: '#EDE7FA',
+  /** Text on accent backgrounds. */
+  onAccent: '#FFFFFF',
   success: '#1E9E5A',
   successSoft: '#DDF3E6',
   error: '#D64545',
@@ -21,23 +24,25 @@ const light = {
 };
 
 const dark: typeof light = {
-  bg: '#0F1012',
-  surface: '#191A1D',
-  surfaceAlt: '#232428',
-  text: '#F1F1F0',
-  textSecondary: '#9B9DA3',
-  border: '#2B2D31',
-  accent: '#6B97FF',
-  accentSoft: '#1E2A44',
+  bg: '#0B0A10',
+  surface: '#17151D',
+  surfaceAlt: '#221F2A',
+  text: '#F1F0F4',
+  textSecondary: '#9D9AA6',
+  border: '#2B2833',
+  // lighter purple so it reads on black
+  accent: '#A78BFA',
+  accentSoft: '#2A1F45',
+  onAccent: '#140B26',
   success: '#3CC17A',
   successSoft: '#163223',
   error: '#F06A6A',
   errorSoft: '#3A1D1D',
   warning: '#F0B04A',
   flagBorder: 'rgba(255,255,255,0.16)',
-  ocean: '#14181D',
-  land: '#3A3D43',
-  landStroke: '#14181D',
+  ocean: '#131119',
+  land: '#3A3744',
+  landStroke: '#131119',
 };
 
 export type Palette = typeof light;

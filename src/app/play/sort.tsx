@@ -147,7 +147,7 @@ export default function Sort() {
               }]}
             >
               <View style={{ width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: pos >= 0 || checked ? c.accent : c.surfaceAlt }}>
-                <T variant="label" color={pos >= 0 || checked ? '#fff' : c.textSecondary}>{checked ? k + 1 : pos >= 0 ? pos + 1 : '·'}</T>
+                <T variant="label" color={pos >= 0 || checked ? c.onAccent : c.textSecondary}>{checked ? k + 1 : pos >= 0 ? pos + 1 : '·'}</T>
               </View>
               {showFlag && <Flag id={e.id} height={opts.show === 'flag' ? 36 : 28} real={round.crit === 'ratio'} normalized={round.crit !== 'ratio'} />}
               <View style={{ flex: 1 }}>
