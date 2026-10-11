@@ -14,6 +14,10 @@ export interface RoomPlayer {
   finished: boolean;
   timeMs: number;
   version: string;
+  /** Seed of the game the player is in (0 before the first one). */
+  round: number;
+  /** Back in the lobby, ready for the next game. */
+  inLobby: boolean;
 }
 
 export interface RoomGame {
@@ -34,7 +38,7 @@ export function useDuelRoom(code: string | null, me: { id: string; name: string;
   const [cfg, setCfg] = useState<OnlineGameConfig | null>(hostCfg ?? null);
   const [game, setGame] = useState<RoomGame | null>(null);
   const channel = useRef<RealtimeChannel | null>(null);
-  const mine = useRef<RoomPlayer>({ ...me, score: 0, answered: 0, finished: false, timeMs: 0 });
+  const mine = useRef<RoomPlayer>({ ...me, score: 0, answered: 0, finished: false, timeMs: 0, round: 0, inLobby: true });
   const cfgRef = useRef(hostCfg);
   cfgRef.current = hostCfg;
 
@@ -56,7 +60,8 @@ export function useDuelRoom(code: string | null, me: { id: string; name: string;
     ch.on('broadcast', { event: 'config' }, ({ payload }) => setCfg(payload as OnlineGameConfig));
     ch.on('broadcast', { event: 'start' }, ({ payload }) => {
       const g = payload as RoomGame;
-      mine.current = { ...mine.current, score: 0, answered: 0, finished: false, timeMs: 0 };
+      // everyone joins the new game, also players still looking at the last results
+      mine.current = { ...mine.current, score: 0, answered: 0, finished: false, timeMs: 0, round: g.seed, inLobby: false };
       ch.track(mine.current);
       setCfg(g.cfg);
       setGame(g);
@@ -94,6 +99,8 @@ export function useDuelRoom(code: string | null, me: { id: string; name: string;
   }, []);
 
   const backToLobby = useCallback(() => {
+    mine.current = { ...mine.current, inLobby: true };
+    channel.current?.track(mine.current);
     setGame(null);
     setStatus('lobby');
   }, []);
