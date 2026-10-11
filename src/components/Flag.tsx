@@ -30,13 +30,15 @@ interface Props {
   style?: StyleProp<ViewStyle>;
   /** Force the 3:2 normalised ratio. */
   normalized?: boolean;
+  /** Force the official ratio, whatever the setting (e.g. when the ratio is the question). */
+  real?: boolean;
 }
 
-function FlagImpl({ id, height, width, xml, style, normalized }: Props) {
+function FlagImpl({ id, height, width, xml, style, normalized, real }: Props) {
   const c = useTheme();
   const { settings } = useApp();
   const e = BY_ID.get(id);
-  const useReal = settings.realRatio && !normalized;
+  const useReal = real || (settings.realRatio && !normalized);
   const ratio = useReal ? e?.ratio ?? NORMALIZED_RATIO : NORMALIZED_RATIO;
   let w = width ?? (height ? height * ratio : 120);
   let h = height ?? w / ratio;

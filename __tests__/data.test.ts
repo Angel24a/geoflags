@@ -31,12 +31,14 @@ describe('generated data', () => {
   it('groups identical flags', () => {
     expect(BY_ID.get('fr')!.sameFlag).toEqual(expect.arrayContaining(['re', 'bl']));
     expect(BY_ID.get('no')!.sameFlag).toEqual(expect.arrayContaining(['bv', 'sj']));
-    expect(BY_ID.get('td')!.sameFlag).not.toContain('ro');
+    // only the shade differs, so they cannot be told apart as answer options
+    expect(BY_ID.get('td')!.sameFlag).toContain('ro');
   });
 
   it('finds visually similar flags', () => {
-    expect(BY_ID.get('td')!.similar.slice(0, 3)).toContain('ro');
-    expect(BY_ID.get('id')!.similar.slice(0, 3)).toContain('mc');
+    expect(BY_ID.get('td')!.similar.slice(0, 3)).toContain('md');
+    expect(BY_ID.get('nl')!.similar.slice(0, 3)).toContain('py');
+    expect(BY_ID.get('id')!.similar.slice(0, 3)).toContain('sg');
     expect(BY_ID.get('ie')!.similar.slice(0, 3)).toContain('ci');
   });
 

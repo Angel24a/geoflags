@@ -1,7 +1,8 @@
 import { describe, expect, it } from '@jest/globals';
 import { BY_ID, ENTITIES, FLAGS } from '@/data';
 import { areNeighbors, makeChain, shortestPath } from '@/lib/chain';
-import { pickSortable, sameDesign } from '@/lib/games';
+import { sameDesign } from '@/lib/games';
+import { correctOrder, criterion, CRITERIA, pickSortItems, positionsOk, ratioLabel } from '@/lib/sort';
 import { filterPool, PRESETS } from '@/lib/pool';
 import { mulberry32 } from '@/lib/random';
 import { colorTokens, makeVariants, mirror } from '@/lib/variants';
@@ -51,8 +52,53 @@ describe('build the flag and sort', () => {
     expect(sameDesign(BY_ID.get('fr')!, 'h', ['blue', 'white', 'red'])).toBe(false);
   });
 
-  it('picks items without ties', () => {
-    const items = pickSortable(ENTITIES, e => e.population, mulberry32(8));
-    expect(new Set(items.map(e => e.population)).size).toBe(items.length);
+});
+
+describe('sort', () => {
+  it('picks items without ties for every criterion and size', () => {
+    const rng = mulberry32(8);
+    for (const def of CRITERIA) {
+      for (const n of [3, 5, 10]) {
+        for (const d of ['easy', 'normal', 'hard'] as const) {
+          const items = pickSortItems(ENTITIES, def.get, n, d, rng);
+          expect(items).toHaveLength(n);
+          expect(items.every(e => def.get(e) !== undefined)).toBe(true);
+          expect(new Set(items.map(def.get)).size).toBe(n);
+        }
+      }
+    }
+  });
+
+  it('spreads values on easy and keeps them close on hard', () => {
+    const pop = criterion('population').get;
+    const spread = (items: typeof ENTITIES) => {
+      const v = items.map(e => Math.log(pop(e)!)).sort((a, b) => a - b);
+      return v[v.length - 1] - v[0];
+    };
+    const avg = (d: 'easy' | 'hard') => {
+      const rng = mulberry32(2);
+      let t = 0;
+      for (let k = 0; k < 30; k++) t += spread(pickSortItems(ENTITIES, pop, 5, d, rng));
+      return t / 30;
+    };
+    expect(avg('easy')).toBeGreaterThan(avg('hard') * 2);
+  });
+
+  it('orders and scores, with ties interchangeable', () => {
+    const items = ['cn', 'in', 'us'].map(id => BY_ID.get(id)!);
+    const area = criterion('area').get;
+    expect(correctOrder(items, area)[0]).toBe('cn');
+    expect(correctOrder(items, area, true)[0]).toBe('in');
+    const ratio = criterion('ratio').get;
+    const flags = ['fr', 'it', 'ch'].map(id => BY_ID.get(id)!); // 2:3, 2:3, 1:1
+    expect(positionsOk(['it', 'fr', 'ch'], flags, ratio)).toEqual([true, true, true]);
+    expect(positionsOk(['ch', 'fr', 'it'], flags, ratio)).toEqual([false, true, false]);
+  });
+
+  it('labels flag proportions', () => {
+    expect(ratioLabel(1.5)).toBe('2:3');
+    expect(ratioLabel(2)).toBe('1:2');
+    expect(ratioLabel(1)).toBe('1:1');
+    expect(ratioLabel(BY_ID.get('us')!.ratio)).toBe('10:19');
   });
 });
