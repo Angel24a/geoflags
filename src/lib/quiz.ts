@@ -1,4 +1,4 @@
-import { ENTITIES, type Entity } from '@/data';
+import { BY_ID, ENTITIES, type Entity } from '@/data';
 import { matchesCapital, matchesName } from './text';
 import { shuffle, weightedPick, type Rng } from './random';
 
@@ -131,9 +131,14 @@ export function makeQuestion(target: Entity, c: QuizConfig, pool: Entity[], o: D
   return { target, options };
 }
 
-/** Typed answers are compared fuzzily against names/aliases or capitals. */
-export function checkTyped(input: string, target: Entity, answer: Attr): boolean {
-  return answer === 'capital' ? matchesCapital(input, target) : matchesName(input, target);
+/**
+ * Typed answers are compared fuzzily against names/aliases or capitals. When
+ * the prompt is a flag shared with other entities, any of them is accepted.
+ */
+export function checkTyped(input: string, target: Entity, answer: Attr, prompt?: Attr): boolean {
+  const matches = (e: Entity) => (answer === 'capital' ? matchesCapital(input, e) : matchesName(input, e));
+  if (matches(target)) return true;
+  return prompt === 'flag' && target.sameFlag.some(id => { const e = BY_ID.get(id); return !!e && matches(e); });
 }
 
 export interface StatLike {

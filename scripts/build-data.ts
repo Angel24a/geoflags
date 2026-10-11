@@ -364,6 +364,7 @@ interface Feat {
   hist: number[]; // palette histogram
   colors: ColorKey[];
   bands?: Bands;
+  keys: ColorKey[]; // GW×GH named colour per pixel
 }
 
 function features(svgText: string): Feat {
@@ -400,6 +401,7 @@ function features(svgText: string): Feat {
     hist,
     colors,
     bands: detectBands(keys, GW, GH),
+    keys,
   };
 }
 
@@ -596,6 +598,13 @@ const spatial = (a: Feat, b: Feat) => a.lab.reduce((s, l, i) => s + dE(l, b.lab[
 // Mirror images (Ireland / Côte d'Ivoire) are easy to confuse, so they count as similar too.
 const spatialMirror = (a: Feat, b: Feat) => a.lab.reduce((s, l, i) => s + dE(l, b.labMirror[i]), 0) / a.lab.length;
 const palette = (a: Feat, b: Feat) => a.hist.reduce((s, v, i) => s + Math.abs(v - b.hist[i]), 0) / 2;
+/**
+ * Share of the flag that is a different named colour. Shades of the same
+ * colour (Chad / Romania, Upper Volta / German Empire) look identical to a player.
+ */
+const keyDiff = (a: Feat, b: Feat) => a.keys.reduce((n, k, i) => n + (k === b.keys[i] ? 0 : 1), 0) / a.keys.length;
+/** Flags with emblems differ by more than this (Paraguay / Netherlands ≈ 0.7%). */
+const SAME_FLAG_MAX_DIFF = 0.005;
 const similar = new Map<string, string[]>();
 const sameFlag = new Map<string, string[]>();
 for (const a of list) {
@@ -606,11 +615,12 @@ for (const a of list) {
       const fb = feats.get(b)!;
       const s = spatial(fa, fb);
       const look = Math.min(s, 1.15 * spatialMirror(fa, fb));
-      return { b, s, d: 0.6 * (look / 60) + 0.4 * palette(fa, fb) };
+      const same = s < 2 || keyDiff(fa, fb) < SAME_FLAG_MAX_DIFF;
+      return { b, s, same, d: 0.6 * (look / 60) + 0.4 * palette(fa, fb) };
     })
     .sort((x, y) => x.d - y.d);
-  sameFlag.set(a, scored.filter(x => x.s < 2).map(x => x.b));
-  similar.set(a, scored.filter(x => x.s >= 2).slice(0, 15).map(x => x.b));
+  sameFlag.set(a, scored.filter(x => x.same).map(x => x.b));
+  similar.set(a, scored.filter(x => !x.same).slice(0, 15).map(x => x.b));
 }
 
 const { topo, has, quality } = buildGeo(drafts);
