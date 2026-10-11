@@ -111,6 +111,9 @@ const circassia = (() => {
     arrow(-38) + arrow(0) + arrow(38));
 })();
 
+// green with white, red and white stripes in the lower part (an exact SVG can go in data/flags/ichkeria.svg)
+const ichkeria = svg(600, 400, stripes(600, 400, ['#00843d', '#fff', '#c8102e', '#fff', '#00843d'], 'h', [12, 1, 3, 1, 3]));
+
 const sealand = svg(600, 400,
   poly([[0, 0], [600, 0], [0, 400]], '#c8102e') + poly([[600, 0], [600, 400], [0, 400]], '#000') +
   // white band of constant width along the diagonal
@@ -545,6 +548,7 @@ export const EXTRAS: ExtraEntity[] = [
   { id: 'somaliland', name: 'Somalilandia', category: 'limited', continent: 'africa', subregion: 'Eastern Africa', capital: 'Hargeisa', latlng: [9.6, 46.0], svg: somaliland, geoName: 'Somaliland', simplified: true, note: 'La franja verde lleva la shahada en blanco (omitida en esta versión).' },
   { id: 'northern-cyprus', name: 'Chipre del Norte', category: 'limited', continent: 'asia', subregion: 'Western Asia', capital: 'Nicosia del Norte', latlng: [35.25, 33.6], svg: northernCyprus, geoName: 'N. Cyprus' },
   { id: 'circassia', name: 'Circasia', category: 'limited', continent: 'europe', subregion: 'Eastern Europe', latlng: [44.6, 40.1], svg: circassia, simplified: true, note: 'Bandera nacional del pueblo circasiano (adigué).' },
+  { id: 'ichkeria', name: 'República Chechena de Ichkeria', aliases: ['Ichkeria', 'Chechenia'], category: 'limited', continent: 'europe', subregion: 'Eastern Europe', capital: 'Grozni', latlng: [43.32, 45.69], svg: ichkeria, note: 'Estado chechenio no reconocido (1991–2000). Hoy tiene un gobierno en el exilio.' },
   { id: 'sealand', name: 'Sealand', category: 'limited', continent: 'europe', subregion: 'Northern Europe', latlng: [51.9, 1.48], svg: sealand, note: 'Micronación en una plataforma marítima frente a Inglaterra.' },
 
   // Spain

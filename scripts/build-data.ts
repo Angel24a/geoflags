@@ -104,8 +104,12 @@ const cca3ToId = new Map(countries.map(c => [c.cca3, c.cca2.toLowerCase()]));
 /** Base flags taken from flag-icons instead of region-flags (newer design or SVG issues). */
 const PREFER_FLAG_ICONS = new Set(['si', 'tf']);
 
+/** Flags dropped into data/flags/<id>.svg replace any other source. */
+const localFlag = (id: string) => path.join(ROOT, 'data/flags', `${id}.svg`);
+
 function readFlag(code: string): string {
   const id = code.toLowerCase();
+  if (fs.existsSync(localFlag(id))) return fs.readFileSync(localFlag(id), 'utf8');
   if (BASE_FLAG_OVERRIDES[id]) return BASE_FLAG_OVERRIDES[id];
   if (PREFER_FLAG_ICONS.has(id)) return fs.readFileSync(path.join(flagIconsDir, `${id}.svg`), 'utf8');
   const rf = path.join(regionFlagsDir, `${code.toUpperCase()}.svg`);
@@ -149,7 +153,7 @@ for (const [id, name, capital, latlng, area, code] of UK_NATIONS) {
 }
 
 for (const x of EXTRAS) {
-  const local = path.join(ROOT, 'data/flags', `${x.id}.svg`);
+  const local = localFlag(x.id);
   const svgRaw = fs.existsSync(local)
     ? fs.readFileSync(local, 'utf8')
     : x.flagIcon
@@ -168,6 +172,14 @@ const ids = new Set<string>();
 for (const d of drafts) {
   if (ids.has(d.id)) throw new Error(`Duplicate id ${d.id}`);
   ids.add(d.id);
+}
+// a misspelt file name would silently be ignored
+const flagsDir = path.join(ROOT, 'data/flags');
+if (fs.existsSync(flagsDir)) {
+  const files = fs.readdirSync(flagsDir).filter(f => f.endsWith('.svg'));
+  const unknown = files.filter(f => !ids.has(f.slice(0, -4)));
+  if (unknown.length) throw new Error(`data/flags: no entity with these ids: ${unknown.join(', ')}`);
+  console.log(`data/flags: ${files.length} flags`);
 }
 
 // ---------------------------------------------------------------------------
