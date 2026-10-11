@@ -44,11 +44,12 @@ y las que todavía no has visto.
 - **Encuentra el error**: entre cuatro versiones (colores cambiados o intercambiados, imagen especular), ¿cuál es la correcta?
 - **Worldle**: adivina por la silueta; cada intento te da la distancia, la dirección y la proximidad.
 - **Cadena de vecinos**: ve de un país a otro pasando solo por fronteras terrestres.
-- **Ordenar**: por población, superficie, latitud o longitud.
+- **Ordenar**: por población, superficie, densidad, latitud, longitud, distancia a España, nº de vecinos, orden alfabético, forma de la bandera o antigüedad; de 3 a 10 elementos, con dificultad y sentido configurables.
+- **Pueblos del mundo**: con la bandera de un pueblo (kurdos, sami, amazigh, maoríes, vascos…), marca en el mapa los países donde vive; al terminar se ven su lengua y su población estimada.
 
 ### Glosario y progreso
 
-- Glosario con buscador y filtros por tipo, continente y **colores**. Cada ficha muestra capital, población, superficie, proporción, colores, forma, ubicación, fronteras, banderas iguales y parecidas, y tu nivel.
+- Glosario con buscador y filtros por tipo, continente y **colores**. Cada ficha muestra capital, población (con su año; estimada en los pueblos y del censo de la época en las históricas), superficie, densidad, lengua propia, proporción, colores, forma, ubicación, fronteras, banderas iguales y parecidas, y tu nivel.
 - Progreso: aciertos, nivel de dominio por bandera y por grupo, banderas para repasar y récords.
 - Ajuste para ver las banderas con su **proporción real** (Nepal, Suiza, Catar…) o todas en 3:2.
 

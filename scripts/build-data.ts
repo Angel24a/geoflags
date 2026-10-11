@@ -21,6 +21,8 @@ import type { Feature, FeatureCollection, Geometry, MultiPolygon, Polygon } from
 import { BASE_FLAG_OVERRIDES, EXTRAS } from '../data/extras';
 import { mainPartShare, silhouetteFill } from '../src/lib/shape';
 import { ALIASES, CAPITALS_ES, NAME_OVERRIDES } from '../data/spanish';
+import { POPULATION_EXTRA } from '../data/population-extra';
+import { PEOPLES } from '../data/peoples';
 import type { Bands, Category, ColorKey, Continent, Entity } from '../src/data/types';
 
 const require = createRequire(import.meta.url);
@@ -173,6 +175,21 @@ for (const d of drafts) {
   if (ids.has(d.id)) throw new Error(`Duplicate id ${d.id}`);
   ids.add(d.id);
 }
+// Population and peoples data for entities without World Bank figures
+for (const [id, fact] of Object.entries(POPULATION_EXTRA)) {
+  const d = drafts.find(x => x.id === id);
+  if (!d) throw new Error(`population-extra: unknown id ${id}`);
+  if (d.population !== undefined) throw new Error(`population-extra: ${id} already has World Bank data`);
+  Object.assign(d, { population: fact.n, popYear: fact.year, popPeople: fact.people || undefined });
+}
+for (const [id, fact] of Object.entries(PEOPLES)) {
+  const d = drafts.find(x => x.id === id);
+  if (!d) throw new Error(`peoples: unknown id ${id}`);
+  const unknown = fact.homeland.filter(h => !ids.has(h));
+  if (unknown.length) throw new Error(`peoples: ${id} has unknown homeland ${unknown.join(', ')}`);
+  Object.assign(d, { homeland: fact.homeland, language: fact.language });
+}
+
 // a misspelt file name would silently be ignored
 const flagsDir = path.join(ROOT, 'data/flags');
 if (fs.existsSync(flagsDir)) {
@@ -206,7 +223,21 @@ function optimiseSvg(id: string, raw: string): string {
     ],
   });
   // react-native-svg needs the namespace-less root to stay valid on web too.
-  return res.data.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"').replace(/xlink:href/g, 'href');
+  return cleanStyles(res.data.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"').replace(/xlink:href/g, 'href'));
+}
+
+/**
+ * react-native-svg splits style attributes on ";" and crashes on Inkscape's
+ * `-inkscape-font-specification:&quot;…&quot;` (the entity contains a ";").
+ */
+function cleanStyles(svgText: string): string {
+  return svgText.replace(/\sstyle="([^"]*)"/g, (_m, css: string) => {
+    const decls = css
+      .replace(/&quot;/g, "'")
+      .split(';')
+      .filter(d => d.includes(':') && !d.trim().startsWith('-inkscape'));
+    return decls.length ? ` style="${decls.join(';')}"` : '';
+  });
 }
 
 /** Display ratio: explicit width/height on the root win over the viewBox (e.g. Qatar uses a stretched viewBox). */

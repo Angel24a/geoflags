@@ -38,7 +38,8 @@ const GAMES: { href: Href; title: string; text: string; icon: IconName }[] = [
   { href: '/play/spot', title: 'Encuentra el error', text: '¿Cuál de las cuatro es la correcta?', icon: 'check' },
   { href: '/play/worldle', title: 'Worldle', text: 'Adivina por la forma con pistas de distancia', icon: 'globe' },
   { href: '/play/chain', title: 'Cadena de vecinos', text: 'Llega de un país a otro por sus fronteras', icon: 'shuffle' },
-  { href: '/play/sort', title: 'Ordenar', text: 'Por población, superficie o latitud', icon: 'chart' },
+  { href: '/play/sort', title: 'Ordenar', text: 'Por población, superficie, vecinos, forma de la bandera…', icon: 'chart' },
+  { href: '/play/peoples', title: 'Pueblos del mundo', text: 'Marca en el mapa dónde vive cada pueblo', icon: 'people' },
 ];
 
 export default function Home() {

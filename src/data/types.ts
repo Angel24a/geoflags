@@ -48,7 +48,16 @@ export interface Entity {
   capital?: string;
   latlng?: [number, number];
   area?: number;
+  /** 0 = no permanent population. */
   population?: number;
+  /** Year of the figure, when it is not the latest World Bank data. */
+  popYear?: number;
+  /** The figure counts the members of a people, not a territory. */
+  popPeople?: boolean;
+  /** Countries where a people mainly lives ("Pueblos del mundo"). */
+  homeland?: string[];
+  /** Own language of a people or region. */
+  language?: string;
   /** Ids of bordering entities (land borders). */
   borders: string[];
   years?: string;

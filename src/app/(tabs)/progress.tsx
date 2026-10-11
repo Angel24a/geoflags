@@ -20,6 +20,7 @@ const RECORD_LABELS: Record<string, string> = {
   worldle: 'Worldle',
   chain: 'Cadena de vecinos',
   sort: 'Ordenar',
+  peoples: 'Pueblos del mundo (racha)',
   complete: 'Completa la región (mejor tiempo)',
 };
 

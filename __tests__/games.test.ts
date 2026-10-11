@@ -2,6 +2,9 @@ import { describe, expect, it } from '@jest/globals';
 import { BY_ID, ENTITIES, FLAGS } from '@/data';
 import { areNeighbors, makeChain, shortestPath } from '@/lib/chain';
 import { sameDesign } from '@/lib/games';
+import { checkHomeland, nextPeople, peopleTargets } from '@/lib/peoples';
+import { density, populationFact } from '@/lib/population';
+import { hasShape } from '@/lib/geo';
 import { correctOrder, criterion, CRITERIA, pickSortItems, positionsOk, ratioLabel } from '@/lib/sort';
 import { filterPool, PRESETS } from '@/lib/pool';
 import { mulberry32 } from '@/lib/random';
@@ -100,5 +103,43 @@ describe('sort', () => {
     expect(ratioLabel(2)).toBe('1:2');
     expect(ratioLabel(1)).toBe('1:1');
     expect(ratioLabel(BY_ID.get('us')!.ratio)).toBe('10:19');
+  });
+});
+
+describe('peoples', () => {
+  it('has homelands made of countries on the map', () => {
+    const targets = peopleTargets(ENTITIES);
+    expect(targets.length).toBeGreaterThanOrEqual(20);
+    for (const e of targets) {
+      expect(e.language).toBeTruthy();
+      for (const h of e.homeland!) expect(hasShape(h)).toBe(true);
+    }
+  });
+
+  it('falls back to every people for pools without them', () => {
+    expect(peopleTargets(ENTITIES.filter(e => e.category === 'sovereign')).length).toBeGreaterThan(0);
+    expect(nextPeople(peopleTargets(ENTITIES), 'kurdistan', mulberry32(1)).id).not.toBe('kurdistan');
+  });
+
+  it('scores found, missed and wrong countries', () => {
+    const r = checkHomeland(['tr', 'iq', 'ir', 'sy'], ['tr', 'iq', 'es']);
+    expect(r).toEqual({ found: ['tr', 'iq'], missed: ['ir', 'sy'], wrong: ['es'], points: 1, perfect: false });
+    expect(checkHomeland(['nz'], ['nz']).perfect).toBe(true);
+  });
+});
+
+describe('population', () => {
+  it('describes territories, peoples and uninhabited places', () => {
+    expect(populationFact(BY_ID.get('es-md')!)).toEqual({ label: 'Población', value: '7.009.000 hab. (2024)' });
+    expect(populationFact(BY_ID.get('kurdistan')!)!.label).toBe('Población estimada del pueblo');
+    expect(populationFact(BY_ID.get('kurdistan')!)!.value).toBe('35 millones de personas');
+    expect(populationFact(BY_ID.get('sami')!)!.value).toBe('80.000 personas');
+    expect(populationFact(BY_ID.get('bv')!)!.value).toBe('Sin población permanente');
+    expect(populationFact(BY_ID.get('nato')!)).toBeNull();
+  });
+
+  it('only computes density for territories', () => {
+    expect(density(BY_ID.get('es')!)).toBeGreaterThan(50);
+    expect(density(BY_ID.get('kurdistan')!)).toBeUndefined();
   });
 });

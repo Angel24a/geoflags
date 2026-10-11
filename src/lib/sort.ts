@@ -1,5 +1,6 @@
 import { BY_ID, ENTITIES, type Entity } from '@/data';
-import { pick, sample, shuffle, type Rng } from './random';
+import { density } from './population';
+import { pick, shuffle, type Rng } from './random';
 
 /** "Sort" game: what is compared, and how a round is set up. */
 export type SortCriterion =
@@ -65,7 +66,9 @@ const ALPHA = new Map([...ENTITIES].sort((a, b) => a.name.localeCompare(b.name, 
 export const CRITERIA: CriterionDef[] = [
   {
     key: 'population', label: 'Población', order: 'De más a menos habitantes', reversed: 'De menos a más habitantes',
-    get: e => e.population, fmt: v => `${es(v / 1e6, v < 1e6 ? 2 : 1)} M hab.`,
+    // current territories only: no peoples, historical censuses or uninhabited places
+    get: e => (e.population && !e.popPeople && e.category !== 'historical' ? e.population : undefined),
+    fmt: v => (v < 1e6 ? `${es(v)} hab.` : `${es(v / 1e6, 1)} M hab.`),
   },
   {
     key: 'area', label: 'Superficie', order: 'De mayor a menor superficie', reversed: 'De menor a mayor superficie',
@@ -73,7 +76,7 @@ export const CRITERIA: CriterionDef[] = [
   },
   {
     key: 'density', label: 'Densidad', order: 'De más a menos densamente poblado', reversed: 'De menos a más densamente poblado',
-    get: e => (e.population && e.area ? e.population / e.area : undefined), fmt: v => `${es(v, v < 10 ? 1 : 0)} hab./km²`,
+    get: density, fmt: v => `${es(v, v < 10 ? 1 : 0)} hab./km²`,
   },
   {
     key: 'lat', label: 'Latitud', order: 'De más al norte a más al sur', reversed: 'De más al sur a más al norte',

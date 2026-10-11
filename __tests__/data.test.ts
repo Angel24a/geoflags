@@ -1,5 +1,6 @@
 import { describe, expect, it } from '@jest/globals';
 import { BY_ID, ENTITIES, FLAGS, PIXELS } from '@/data';
+import { parse } from 'react-native-svg';
 
 describe('generated data', () => {
   it('has the 254 base flags plus the extras', () => {
@@ -52,5 +53,17 @@ describe('generated data', () => {
     expect(BY_ID.get('gb')!.capital).toBe('Londres');
     expect(BY_ID.get('cn')!.capital).toBe('Pekín');
     expect(BY_ID.get('sz')!.name).toBe('Esuatini');
+  });
+
+  it('has flags that react-native-svg can parse', () => {
+    const bad = Object.entries(FLAGS).filter(([, svg]) => {
+      try {
+        parse(svg);
+        return false;
+      } catch {
+        return true;
+      }
+    });
+    expect(bad.map(([id]) => id)).toEqual([]);
   });
 });
