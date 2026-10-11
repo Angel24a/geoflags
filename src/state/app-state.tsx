@@ -5,6 +5,7 @@ import { ALL, filterPool, type PoolFilter } from '@/lib/pool';
 import { rankedKey, submitScore } from '@/lib/online/api';
 import { onlineConfigured } from '@/lib/online/client';
 import type { GameResult } from '@/lib/online/seeded';
+import type { SortOptions } from '@/lib/sort';
 import type { Entity } from '@/data/types';
 
 export interface Settings {
@@ -13,6 +14,8 @@ export interface Settings {
   realRatio: boolean;
   /** Use visually similar flags as wrong options. */
   similarOptions: boolean;
+  /** Last options of the "sort" game. */
+  sort?: SortOptions;
 }
 
 /** Per-entity learning record. */

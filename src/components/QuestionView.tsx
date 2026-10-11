@@ -78,7 +78,7 @@ export function QuestionView({ question, cfg, answered, picked, onAnswer }: Prop
   };
 
   const correctLabel = cfg.answer === 'capital' ? t.capital : t.name;
-  const submitTyped = () => typed.trim() && answer(checkTyped(typed, t, cfg.answer), typed.trim());
+  const submitTyped = () => typed.trim() && answer(checkTyped(typed, t, cfg.answer, cfg.prompt), typed.trim());
 
   return (
     <View>

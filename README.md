@@ -7,14 +7,14 @@ Hecha con **Expo (React Native) + TypeScript** y Expo Router.
 
 ## Qué incluye
 
-### 348 banderas
+### 350 banderas
 
 | Grupo | Nº | Contenido |
 |---|---:|---|
 | Base | 254 | Los 249 códigos ISO 3166-1 (193 estados de la ONU, Vaticano, Palestina, territorios dependientes…) + Kosovo + Inglaterra, Escocia, Gales e Irlanda del Norte |
-| No reconocidos / reconocimiento limitado | +7 | Abjasia, Osetia del Sur, Transnistria, Somalilandia, Chipre del Norte, Circasia, Sealand (además de Kosovo, Taiwán, Palestina y Sahara Occidental de la base) |
+| No reconocidos / reconocimiento limitado | +8 | Abjasia, Osetia del Sur, Transnistria, Somalilandia, Chipre del Norte, Circasia, Ichkeria, Sealand (además de Kosovo, Taiwán, Palestina y Sahara Occidental de la base) |
 | Comunidades autónomas | 19 | Las 17 comunidades + Ceuta y Melilla |
-| Históricas | 32 | URSS, Yugoslavia, RDA, Imperio alemán y ruso, II República, Zaire, Rodesia, Vietnam del Sur, Biafra, Artsaj, Texas, Hawái… |
+| Históricas | 33 | URSS, España franquista, Yugoslavia, RDA, Imperio alemán y ruso, II República, Zaire, Rodesia, Vietnam del Sur, Biafra, Artsaj, Texas, Hawái… |
 | Pueblos y regiones culturales | 23 | Kurdistán, Tíbet, sami, gitano, aborígenes australianos, Bretaña, Córcega, Cerdeña, wiphala, amazigh, maorí… |
 | Organizaciones | 13 | UE, ONU, OTAN, Liga Árabe, ASEAN, Juegos Olímpicos, Cruz Roja… |
 
@@ -38,19 +38,32 @@ y las que todavía no has visto.
 
 ### Juegos
 
-- **Completa la región**: escribe todos los países de un continente, región o grupo (con las banderas como pista, si quieres).
+En **Jugar** los juegos están agrupados en cuatro categorías.
+
+**Banderas**
 - **Pixelada o zoom**: la bandera se va revelando; cuanto antes aciertes, más puntos.
 - **Construye la bandera**: elige la orientación, el número de franjas y sus colores (banderas de franjas detectadas automáticamente).
 - **Encuentra el error**: entre cuatro versiones (colores cambiados o intercambiados, imagen especular), ¿cuál es la correcta?
+
+**Mapas**
+- **Completa la región**: escribe todos los países de un continente, región o grupo (con las banderas como pista, si quieres).
 - **Worldle**: adivina por la silueta; cada intento te da la distancia, la dirección y la proximidad.
 - **Cadena de vecinos**: ve de un país a otro pasando solo por fronteras terrestres.
-- **Ordenar**: por población, superficie, latitud o longitud.
+
+**Datos**
+- **Población**: elige la cifra entre cuatro, ¿más o menos? (racha) o estima con una barra en escala logarítmica; con rondas, dificultad y opción de ver solo la bandera.
+- **Ordenar**: por población, superficie, densidad, latitud, longitud, distancia a España, nº de vecinos, orden alfabético, forma de la bandera o antigüedad; de 3 a 10 elementos, con dificultad y sentido configurables.
+
+**Pueblos e idiomas**
+- **Idiomas**: lee una frase y di en qué idioma está (eligiendo, escribiendo o señalando la bandera de un país donde se habla). Hay 76 idiomas y 286 frases, de los más hablados a lenguas pequeñas (feroés, maltés, tok pisin, guaraní, hawaiano…).
+- **Pueblos del mundo**: con la bandera de un pueblo (kurdos, sami, amazigh, maoríes, vascos…), marca en el mapa los países donde vive; al terminar se ven su lengua y su población estimada.
 
 ### Glosario y progreso
 
-- Glosario con buscador y filtros por tipo, continente y **colores**. Cada ficha muestra capital, población, superficie, proporción, colores, forma, ubicación, fronteras, banderas iguales y parecidas, y tu nivel.
-- Progreso: aciertos, nivel de dominio por bandera y por grupo, banderas para repasar y récords.
-- Ajuste para ver las banderas con su **proporción real** (Nepal, Suiza, Catar…) o todas en 3:2.
+- El glosario tiene dos secciones, **Banderas** e **Idiomas**. Cada idioma tiene su ficha: nombre propio, familia, escritura, hablantes, frases con traducción, países donde se habla y lenguas emparentadas.
+- Glosario de banderas con buscador y filtros por tipo, continente y **colores**. Cada ficha muestra capital, población (con su año; estimada en los pueblos y del censo de la época en las históricas), superficie, densidad, lengua propia, proporción, colores, forma, ubicación, fronteras, banderas iguales y parecidas, y tu nivel.
+- Progreso: aciertos, dominio de banderas (por grupo) y de idiomas, qué repasar y récords agrupados por tipo de juego.
+- En **Progreso → Ajustes**: ver las banderas con su **proporción real** (Nepal, Suiza, Catar…) o todas en 3:2.
 
 ## Probarla
 
@@ -85,9 +98,10 @@ npm run build:data  # regenera src/data/generated/*
 ### Estructura
 
 ```
-data/                 fuentes propias: banderas extra (SVG generados por código), nombres en español, población
+data/                 fuentes propias: banderas extra, flags/<id>.svg, nombres en español, población, pueblos e idiomas
 scripts/build-data.ts genera los datos de la app
-src/data/generated/   entities.json, flags.json (SVG optimizados), pixels.json, geo.json (TopoJSON)
+scripts/build-icons.ts dibuja el icono (globo en negro y morado) y la pantalla de inicio
+src/data/generated/   entities.json, flags.json (SVG optimizados), pixels.json, geo.json (TopoJSON), languages.json
 src/lib/              lógica sin interfaz: quiz, texto, geo, cadena, variantes, filtros…
 src/components/       Flag, ShapeView, WorldMap, RevealFlag, ui, game
 src/app/              pantallas (Expo Router)
@@ -103,14 +117,17 @@ __tests__/            tests
 3. Rasteriza cada bandera (resvg) y calcula:
    - una cuadrícula de 24×16 píxeles para el modo pixelado;
    - un histograma sobre 10 colores con nombre (en espacio CIELAB);
-   - una distancia entre banderas = 0,6 · diferencia espacial (ΔE medio en una cuadrícula de 12×8, también contra la imagen especular) + 0,4 · diferencia de histogramas. Así se obtienen las 15 banderas más parecidas y los grupos de banderas idénticas;
+   - una distancia entre banderas = 0,6 · diferencia espacial (ΔE medio en una cuadrícula de 12×8, también contra la imagen especular) + 0,4 · diferencia de histogramas. Así se obtienen las 15 banderas más parecidas;
+   - los grupos de banderas idénticas: el mismo color con nombre en más del 99,5 % de la superficie (Chad y Rumanía, Alto Volta e Imperio alemán). Un escudo o una estrella ya las distingue (Egipto y Yemen son parecidas, no iguales). Las idénticas nunca salen juntas como opciones;
    - las franjas (orientación, colores y grosores) cuando la bandera es solo de franjas;
    - si es simétrica, para no usar la imagen especular como "error".
 4. Geometría de Natural Earth (`world-atlas`): resolución 1:50m para los países grandes y 1:10m para los pequeños; separa los territorios de ultramar de su país (Guayana Francesa, Martinica, Svalbard…) y simplifica cada territorio con Douglas–Peucker en proporción a su tamaño.
 
 Algunas banderas dibujadas a mano tienen el escudo o emblema **simplificado**
-(se indica en su ficha). Para sustituir una, deja un SVG en
-`data/flags/<id>.svg` y vuelve a ejecutar `npm run build:data`.
+(se indica en su ficha). Para sustituir cualquier bandera (también las 254
+base), deja un SVG en `data/flags/<id>.svg` y vuelve a ejecutar
+`npm run build:data`. Si un archivo no corresponde a ningún id, el script falla
+y lo indica.
 
 ## Modo online
 

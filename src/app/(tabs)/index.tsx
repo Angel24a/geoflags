@@ -1,14 +1,13 @@
 import { router, type Href } from 'expo-router';
-import { View } from 'react-native';
+import { Linking, ScrollView, View } from 'react-native';
 
 import { Flag } from '@/components/Flag';
 import { Card, Icon, Row, Screen, SectionTitle, T, type IconName } from '@/components/ui';
 import { describePool } from '@/lib/pool';
-import { useAvailableUpdate } from '@/lib/updates';
-import { Linking } from 'react-native';
 import type { Attr, Rule } from '@/lib/quiz';
+import { useAvailableUpdate } from '@/lib/updates';
 import { useApp } from '@/state/app-state';
-import { space, useTheme } from '@/theme';
+import { radius, space, useTheme } from '@/theme';
 
 interface QuickQuiz {
   label: string;
@@ -31,20 +30,50 @@ const CHALLENGES: { rule: Rule; title: string; text: string; icon: IconName }[] 
   { rule: 'streak', title: 'Racha', text: 'Sin fallar', icon: 'flame' },
 ];
 
-const GAMES: { href: Href; title: string; text: string; icon: IconName }[] = [
-  { href: '/play/complete', title: 'Completa la región', text: 'Escribe todos los de un continente o región', icon: 'grid' },
-  { href: '/play/reveal', title: 'Pixelada o zoom', text: 'Adivina la bandera mientras se revela', icon: 'search' },
-  { href: '/play/build', title: 'Construye la bandera', text: 'Elige las franjas y sus colores', icon: 'filter' },
-  { href: '/play/spot', title: 'Encuentra el error', text: '¿Cuál de las cuatro es la correcta?', icon: 'check' },
-  { href: '/play/worldle', title: 'Worldle', text: 'Adivina por la forma con pistas de distancia', icon: 'globe' },
-  { href: '/play/chain', title: 'Cadena de vecinos', text: 'Llega de un país a otro por sus fronteras', icon: 'shuffle' },
-  { href: '/play/sort', title: 'Ordenar', text: 'Por población, superficie o latitud', icon: 'chart' },
+interface Game {
+  href: Href;
+  title: string;
+  text: string;
+  icon: IconName;
+  isNew?: boolean;
+}
+
+const CATEGORIES: { title: string; games: Game[] }[] = [
+  {
+    title: 'Banderas',
+    games: [
+      { href: '/play/reveal', title: 'Pixelada o zoom', text: 'Adivina mientras se revela', icon: 'search' },
+      { href: '/play/build', title: 'Construye la bandera', text: 'Elige franjas y colores', icon: 'filter' },
+      { href: '/play/spot', title: 'Encuentra el error', text: '¿Cuál es la correcta?', icon: 'check' },
+    ],
+  },
+  {
+    title: 'Mapas',
+    games: [
+      { href: '/play/complete', title: 'Completa la región', text: 'Todos los de un continente', icon: 'grid' },
+      { href: '/play/worldle', title: 'Worldle', text: 'Por la forma y la distancia', icon: 'globe' },
+      { href: '/play/chain', title: 'Cadena de vecinos', text: 'De un país a otro por tierra', icon: 'shuffle' },
+    ],
+  },
+  {
+    title: 'Datos',
+    games: [
+      { href: '/play/population', title: 'Población', text: 'Cifras, más o menos y estimar', icon: 'population', isNew: true },
+      { href: '/play/sort', title: 'Ordenar', text: 'Población, superficie, vecinos…', icon: 'chart' },
+    ],
+  },
+  {
+    title: 'Pueblos e idiomas',
+    games: [
+      { href: '/play/languages', title: 'Idiomas', text: '¿En qué idioma está la frase?', icon: 'language', isNew: true },
+      { href: '/play/peoples', title: 'Pueblos del mundo', text: '¿Dónde vive cada pueblo?', icon: 'people' },
+    ],
+  },
 ];
 
 export default function Home() {
   const c = useTheme();
   const { settings, poolEntities } = useApp();
-  const sample = poolEntities.slice(0, 3);
   const update = useAvailableUpdate();
 
   const startQuiz = (q: { prompt: Attr; answer: Attr; rule?: Rule }) =>
@@ -57,7 +86,7 @@ export default function Home() {
     <Screen>
       <View style={{ paddingTop: space.lg }}>
         <T variant="title">GeoFlags</T>
-        <T muted>Aprende las banderas del mundo</T>
+        <T muted>Banderas, mapas, idiomas y pueblos del mundo</T>
       </View>
 
       {update && (
@@ -67,39 +96,41 @@ export default function Home() {
         </Card>
       )}
 
-      <Card onPress={() => router.push('/pool')} style={{ marginTop: space.xl }}>
-        <Row style={{ justifyContent: 'space-between' }}>
+      <Card onPress={() => router.push('/pool')} style={{ marginTop: space.lg, paddingVertical: space.md }}>
+        <Row>
           <View style={{ flex: 1 }}>
             <T variant="caption" muted>Banderas en juego</T>
-            <T variant="heading">{describePool(settings.pool)}</T>
-            <T variant="caption" muted>{poolEntities.length} banderas</T>
+            <T variant="label">{describePool(settings.pool)} · {poolEntities.length}</T>
           </View>
           <Row gap={4}>
-            {sample.map(e => (
-              <Flag key={e.id} id={e.id} height={22} normalized />
-            ))}
+            {poolEntities.slice(0, 3).map(e => <Flag key={e.id} id={e.id} height={20} normalized />)}
           </Row>
           <Icon name="chevron" color={c.textSecondary} />
         </Row>
       </Card>
 
       <SectionTitle>Test</SectionTitle>
-      <Card onPress={() => router.push('/play/setup')}>
-        <Row style={{ justifyContent: 'space-between' }}>
+      <Card onPress={() => router.push('/play/setup')} style={{ backgroundColor: c.accent, borderColor: c.accent }}>
+        <Row>
           <View style={{ flex: 1 }}>
-            <T variant="heading">Test personalizado</T>
-            <T variant="caption" muted>Combina banderas, nombres, capitales, formas y mapa</T>
+            <T variant="heading" color={c.onAccent}>Test personalizado</T>
+            <T variant="caption" color={c.onAccent} style={{ opacity: 0.85 }}>Banderas, nombres, capitales, formas y mapa</T>
           </View>
-          <Icon name="chevron" color={c.textSecondary} />
+          <Icon name="chevron" color={c.onAccent} />
         </Row>
       </Card>
-      <Row wrap gap={space.sm} style={{ marginTop: space.sm }}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={{ marginTop: space.sm, marginHorizontal: -space.lg, flexGrow: 0 }}
+        contentContainerStyle={{ gap: space.sm, paddingHorizontal: space.lg, alignItems: 'flex-start' }}
+      >
         {QUICK.map(q => (
-          <Card key={q.label} onPress={() => startQuiz(q)} style={{ paddingVertical: space.md, paddingHorizontal: space.md, flexGrow: 1, flexBasis: '45%' }}>
+          <Card key={q.label} onPress={() => startQuiz(q)} style={{ paddingVertical: space.sm, paddingHorizontal: space.md }}>
             <T variant="label">{q.label}</T>
           </Card>
         ))}
-      </Row>
+      </ScrollView>
 
       <SectionTitle>Desafíos</SectionTitle>
       <Row gap={space.sm}>
@@ -107,7 +138,7 @@ export default function Home() {
           <Card
             key={ch.rule}
             onPress={() => router.push({ pathname: '/play/setup', params: { rule: ch.rule } })}
-            style={{ flex: 1, alignItems: 'flex-start', gap: space.sm }}
+            style={{ flex: 1, alignItems: 'flex-start', gap: space.sm, padding: space.md }}
           >
             <Icon name={ch.icon} color={c.accent} />
             <View>
@@ -118,23 +149,31 @@ export default function Home() {
         ))}
       </Row>
 
-      <SectionTitle>Juegos</SectionTitle>
-      <View style={{ gap: space.sm }}>
-        {GAMES.map(g => (
-          <Card key={g.title} onPress={() => router.push(g.href)}>
-            <Row gap={space.md}>
-              <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: c.accentSoft, alignItems: 'center', justifyContent: 'center' }}>
-                <Icon name={g.icon} color={c.accent} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <T variant="label">{g.title}</T>
-                <T variant="caption" muted>{g.text}</T>
-              </View>
-              <Icon name="chevron" color={c.textSecondary} />
-            </Row>
-          </Card>
-        ))}
-      </View>
+      {CATEGORIES.map(cat => (
+        <View key={cat.title}>
+          <SectionTitle>{cat.title}</SectionTitle>
+          <Row wrap gap={space.sm} style={{ alignItems: 'stretch' }}>
+            {cat.games.map(g => (
+              <Card key={g.title} onPress={() => router.push(g.href)} style={{ flexBasis: '47%', flexGrow: 1, maxWidth: '49%', padding: space.md, gap: space.sm }}>
+                <Row style={{ justifyContent: 'space-between' }}>
+                  <View style={{ width: 36, height: 36, borderRadius: radius.sm, backgroundColor: c.accentSoft, alignItems: 'center', justifyContent: 'center' }}>
+                    <Icon name={g.icon} size={20} color={c.accent} />
+                  </View>
+                  {g.isNew && (
+                    <View style={{ backgroundColor: c.accent, borderRadius: radius.pill, paddingHorizontal: 8, paddingVertical: 2 }}>
+                      <T variant="caption" color={c.onAccent} style={{ fontSize: 11, fontWeight: '700' }}>NUEVO</T>
+                    </View>
+                  )}
+                </Row>
+                <View>
+                  <T variant="label">{g.title}</T>
+                  <T variant="caption" muted numberOfLines={2}>{g.text}</T>
+                </View>
+              </Card>
+            ))}
+          </Row>
+        </View>
+      ))}
     </Screen>
   );
 }

@@ -6,7 +6,8 @@ import { Flag } from '@/components/Flag';
 import { ShapeView } from '@/components/ShapeView';
 import { WorldMap } from '@/components/WorldMap';
 import { Card, Chip, Row, Screen, SectionTitle, T } from '@/components/ui';
-import { BY_ID, CATEGORY_LABEL, COLOR_HEX, COLOR_LABEL, CONTINENT_LABEL } from '@/data';
+import { BY_ID, LANGUAGES_OF, CATEGORY_LABEL, COLOR_HEX, COLOR_LABEL, CONTINENT_LABEL } from '@/data';
+import { density, populationFact } from '@/lib/population';
 import { MASTERY_LABEL, masteryLevel, useApp } from '@/state/app-state';
 import { MAX_WIDTH, space, useTheme } from '@/theme';
 
@@ -33,6 +34,8 @@ export default function EntityDetail() {
   const m = masteryLevel(s);
   const flagW = Math.min(width, MAX_WIDTH) - space.lg * 2;
   const go = (other: string) => router.push({ pathname: '/glossary/[id]', params: { id: other } });
+  const pop = populationFact(e);
+  const dens = density(e);
 
   return (
     <Screen edges={[]}>
@@ -56,8 +59,10 @@ export default function EntityDetail() {
       <Card style={{ marginTop: space.lg }}>
         {e.capital && <Fact label="Capital">{e.capital}</Fact>}
         {e.years && <Fact label="Periodo">{e.years}</Fact>}
-        {e.population && <Fact label="Población">{fmt(e.population)}</Fact>}
+        {pop && <Fact label={pop.label}>{pop.value}</Fact>}
         {e.area && <Fact label="Superficie">{fmt(Math.round(e.area))} km²</Fact>}
+        {dens !== undefined && <Fact label="Densidad">{dens.toLocaleString('es-ES', { maximumFractionDigits: dens < 10 ? 1 : 0 })} hab./km²</Fact>}
+        {e.language && <Fact label="Lengua propia">{e.language}</Fact>}
         <Fact label="Proporción">{proportion(e.ratio)}</Fact>
         <View style={{ paddingVertical: space.sm }}>
           <T variant="caption" muted>Colores</T>
@@ -87,6 +92,16 @@ export default function EntityDetail() {
         </>
       )}
 
+      {(LANGUAGES_OF.get(e.id)?.length ?? 0) > 0 && (
+        <>
+          <SectionTitle>Idiomas</SectionTitle>
+          <Row wrap gap={6}>
+            {LANGUAGES_OF.get(e.id)!.map(l => (
+              <Chip key={l.id} label={l.name} onPress={() => router.push({ pathname: '/language/[id]', params: { id: l.id } })} />
+            ))}
+          </Row>
+        </>
+      )}
       {e.borders.length > 0 && (
         <>
           <SectionTitle>Fronteras</SectionTitle>

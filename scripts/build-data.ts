@@ -21,6 +21,9 @@ import type { Feature, FeatureCollection, Geometry, MultiPolygon, Polygon } from
 import { BASE_FLAG_OVERRIDES, EXTRAS } from '../data/extras';
 import { mainPartShare, silhouetteFill } from '../src/lib/shape';
 import { ALIASES, CAPITALS_ES, NAME_OVERRIDES } from '../data/spanish';
+import { POPULATION_EXTRA } from '../data/population-extra';
+import { PEOPLES } from '../data/peoples';
+import { LANGUAGES } from '../data/languages';
 import type { Bands, Category, ColorKey, Continent, Entity } from '../src/data/types';
 
 const require = createRequire(import.meta.url);
@@ -104,8 +107,12 @@ const cca3ToId = new Map(countries.map(c => [c.cca3, c.cca2.toLowerCase()]));
 /** Base flags taken from flag-icons instead of region-flags (newer design or SVG issues). */
 const PREFER_FLAG_ICONS = new Set(['si', 'tf']);
 
+/** Flags dropped into data/flags/<id>.svg replace any other source. */
+const localFlag = (id: string) => path.join(ROOT, 'data/flags', `${id}.svg`);
+
 function readFlag(code: string): string {
   const id = code.toLowerCase();
+  if (fs.existsSync(localFlag(id))) return fs.readFileSync(localFlag(id), 'utf8');
   if (BASE_FLAG_OVERRIDES[id]) return BASE_FLAG_OVERRIDES[id];
   if (PREFER_FLAG_ICONS.has(id)) return fs.readFileSync(path.join(flagIconsDir, `${id}.svg`), 'utf8');
   const rf = path.join(regionFlagsDir, `${code.toUpperCase()}.svg`);
@@ -149,7 +156,7 @@ for (const [id, name, capital, latlng, area, code] of UK_NATIONS) {
 }
 
 for (const x of EXTRAS) {
-  const local = path.join(ROOT, 'data/flags', `${x.id}.svg`);
+  const local = localFlag(x.id);
   const svgRaw = fs.existsSync(local)
     ? fs.readFileSync(local, 'utf8')
     : x.flagIcon
@@ -169,21 +176,67 @@ for (const d of drafts) {
   if (ids.has(d.id)) throw new Error(`Duplicate id ${d.id}`);
   ids.add(d.id);
 }
+// Population and peoples data for entities without World Bank figures
+for (const [id, fact] of Object.entries(POPULATION_EXTRA)) {
+  const d = drafts.find(x => x.id === id);
+  if (!d) throw new Error(`population-extra: unknown id ${id}`);
+  if (d.population !== undefined) throw new Error(`population-extra: ${id} already has World Bank data`);
+  Object.assign(d, { population: fact.n, popYear: fact.year, popPeople: fact.people || undefined });
+}
+for (const [id, fact] of Object.entries(PEOPLES)) {
+  const d = drafts.find(x => x.id === id);
+  if (!d) throw new Error(`peoples: unknown id ${id}`);
+  const unknown = fact.homeland.filter(h => !ids.has(h));
+  if (unknown.length) throw new Error(`peoples: ${id} has unknown homeland ${unknown.join(', ')}`);
+  Object.assign(d, { homeland: fact.homeland, language: fact.language });
+}
+
+// Languages: every country must exist and every language needs a few sentences to vary
+{
+  const seen = new Set<string>();
+  for (const l of LANGUAGES) {
+    if (seen.has(l.id)) throw new Error(`languages: duplicate id ${l.id}`);
+    seen.add(l.id);
+    const unknown = l.countries.filter(c => !ids.has(c));
+    if (unknown.length) throw new Error(`languages: ${l.id} has unknown countries ${unknown.join(', ')}`);
+    if (l.phrases.length < 2) throw new Error(`languages: ${l.id} needs at least 2 sentences`);
+  }
+}
+
+// a misspelt file name would silently be ignored
+const flagsDir = path.join(ROOT, 'data/flags');
+if (fs.existsSync(flagsDir)) {
+  const files = fs.readdirSync(flagsDir).filter(f => f.endsWith('.svg'));
+  const unknown = files.filter(f => !ids.has(f.slice(0, -4)));
+  if (unknown.length) throw new Error(`data/flags: no entity with these ids: ${unknown.join(', ')}`);
+  console.log(`data/flags: ${files.length} flags`);
+}
 
 // ---------------------------------------------------------------------------
 // Flags: optimise SVG
 // ---------------------------------------------------------------------------
+
+/** Flags heavier than this after optimising lose one more decimal (detailed coats of arms). */
+const HEAVY_FLAG = 60_000;
 
 function optimiseSvg(id: string, raw: string): string {
   // Keep ~3 significant digits relative to the flag size.
   const vb = raw.match(/viewBox="[\d.\-]+[\s,]+[\d.\-]+[\s,]+([\d.]+)/);
   const wAttr = raw.match(/<svg[^>]*\swidth="([\d.]+)/);
   const width = vb ? +vb[1] : wAttr ? +wAttr[1] : 600;
+  const precision = Math.max(1, Math.ceil(3 - Math.log10(width)));
+  const out = optimiseWith(id, raw, precision);
+  // an error of a thousandth of the width is invisible at phone sizes
+  return out.length > HEAVY_FLAG ? optimiseWith(id, raw, Math.max(0, Math.ceil(2.5 - Math.log10(width)))) : out;
+}
+
+function optimiseWith(id: string, raw: string, floatPrecision: number): string {
   const res = optimize(raw, {
     multipass: true,
-    floatPrecision: Math.max(1, Math.ceil(3 - Math.log10(width))),
+    floatPrecision,
     plugins: [
-      { name: 'preset-default', params: { overrides: { cleanupIds: { minify: true } } } },
+      // react-native-svg ignores <style>, so CSS classes become attributes even when reused
+      { name: 'preset-default', params: { overrides: { cleanupIds: { minify: true }, inlineStyles: { onlyMatchedOnce: false } } } },
       'removeTitle',
       'removeDesc',
       'removeDimensions',
@@ -193,7 +246,21 @@ function optimiseSvg(id: string, raw: string): string {
     ],
   });
   // react-native-svg needs the namespace-less root to stay valid on web too.
-  return res.data.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"').replace(/xlink:href/g, 'href');
+  return cleanStyles(res.data.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"').replace(/xlink:href/g, 'href'));
+}
+
+/**
+ * react-native-svg splits style attributes on ";" and crashes on Inkscape's
+ * `-inkscape-font-specification:&quot;…&quot;` (the entity contains a ";").
+ */
+function cleanStyles(svgText: string): string {
+  return svgText.replace(/\sstyle="([^"]*)"/g, (_m, css: string) => {
+    const decls = css
+      .replace(/&quot;/g, "'")
+      .split(';')
+      .filter(d => d.includes(':') && !d.trim().startsWith('-inkscape'));
+    return decls.length ? ` style="${decls.join(';')}"` : '';
+  });
 }
 
 /** Display ratio: explicit width/height on the root win over the viewBox (e.g. Qatar uses a stretched viewBox). */
@@ -364,6 +431,7 @@ interface Feat {
   hist: number[]; // palette histogram
   colors: ColorKey[];
   bands?: Bands;
+  keys: ColorKey[]; // GW×GH named colour per pixel
 }
 
 function features(svgText: string): Feat {
@@ -400,6 +468,7 @@ function features(svgText: string): Feat {
     hist,
     colors,
     bands: detectBands(keys, GW, GH),
+    keys,
   };
 }
 
@@ -596,6 +665,16 @@ const spatial = (a: Feat, b: Feat) => a.lab.reduce((s, l, i) => s + dE(l, b.lab[
 // Mirror images (Ireland / Côte d'Ivoire) are easy to confuse, so they count as similar too.
 const spatialMirror = (a: Feat, b: Feat) => a.lab.reduce((s, l, i) => s + dE(l, b.labMirror[i]), 0) / a.lab.length;
 const palette = (a: Feat, b: Feat) => a.hist.reduce((s, v, i) => s + Math.abs(v - b.hist[i]), 0) / 2;
+/**
+ * Share of the flag that is a different named colour. Shades of the same
+ * colour (Chad / Romania, Upper Volta / German Empire) look identical to a player.
+ */
+const keyDiff = (a: Feat, b: Feat) => a.keys.reduce((n, k, i) => n + (k === b.keys[i] ? 0 : 1), 0) / a.keys.length;
+/** Flags with emblems differ by more than this (Paraguay / Netherlands ≈ 0.7%). */
+const SAME_FLAG_MAX_DIFF = 0.005;
+/** Same design that the colour comparison misses (the star is a little bigger). */
+const SAME_FLAG_PAIRS: [string, string][] = [['congo-free-state', 'republic-of-texas']];
+const samePair = (a: string, b: string) => SAME_FLAG_PAIRS.some(([x, y]) => (x === a && y === b) || (x === b && y === a));
 const similar = new Map<string, string[]>();
 const sameFlag = new Map<string, string[]>();
 for (const a of list) {
@@ -606,11 +685,12 @@ for (const a of list) {
       const fb = feats.get(b)!;
       const s = spatial(fa, fb);
       const look = Math.min(s, 1.15 * spatialMirror(fa, fb));
-      return { b, s, d: 0.6 * (look / 60) + 0.4 * palette(fa, fb) };
+      const same = keyDiff(fa, fb) < SAME_FLAG_MAX_DIFF || samePair(a, b);
+      return { b, s, same, d: 0.6 * (look / 60) + 0.4 * palette(fa, fb) };
     })
     .sort((x, y) => x.d - y.d);
-  sameFlag.set(a, scored.filter(x => x.s < 2).map(x => x.b));
-  similar.set(a, scored.filter(x => x.s >= 2).slice(0, 15).map(x => x.b));
+  sameFlag.set(a, scored.filter(x => x.same).map(x => x.b));
+  similar.set(a, scored.filter(x => !x.same).slice(0, 15).map(x => x.b));
 }
 
 const { topo, has, quality } = buildGeo(drafts);
@@ -645,4 +725,5 @@ write('entities.json', entities);
 write('flags.json', flags);
 write('pixels.json', Object.fromEntries([...feats].map(([id, f]) => [id, f.pixels])));
 write('geo.json', topo);
+write('languages.json', LANGUAGES);
 console.log(`${entities.length} entities (${entities.filter(e => e.base).length} base)`);

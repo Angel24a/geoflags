@@ -27,6 +27,11 @@ interface Props {
   pinColor?: string;
   /** Territories to frame when the map opens (e.g. the countries of a chain). */
   focus?: string[];
+  /**
+   * Draw the borders between territories (default). Without them only the
+   * land and the highlighted territories are visible.
+   */
+  borders?: boolean;
 }
 
 /** Visible part of the projected map, in projection pixels (like an SVG viewBox). */
@@ -53,7 +58,7 @@ function clampView(v: View4, W: number, H: number): View4 {
  * gesture ends, the map is redrawn for the new view so it stays sharp at any
  * zoom (scaling the rendered view would pixelate on Android).
  */
-function WorldMapImpl({ height = 300, highlights = [], onPick, dotIds, pin, pinColor, focus }: Props) {
+function WorldMapImpl({ height = 300, highlights = [], onPick, dotIds, pin, pinColor, focus, borders = true }: Props) {
   const c = useTheme();
   const [width, setWidth] = useState(0);
   const onLayout = (e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width);
@@ -102,6 +107,11 @@ function WorldMapImpl({ height = 300, highlights = [], onPick, dotIds, pin, pinC
   }, [dotIds, proj]);
 
   const hl = useMemo(() => new Map(highlights.map(x => [x.id, x.color])), [highlights]);
+  // without borders, plain land is drawn first so it cannot cover the outline of a highlighted territory
+  const ordered = useMemo(
+    () => (borders ? shapes : [...shapes.filter(s => !hl.has(s.id)), ...shapes.filter(s => hl.has(s.id))]),
+    [shapes, hl, borders],
+  );
 
   // Live gesture transform, folded into `view` when the gesture ends.
   const scale = useSharedValue(1);
@@ -211,11 +221,14 @@ function WorldMapImpl({ height = 300, highlights = [], onPick, dotIds, pin, pinC
             <Svg width={W} height={H} viewBox={`${view.x} ${view.y} ${view.w} ${view.h}`}>
               <Path d={sphere} fill={c.ocean} />
               <G>
-                {shapes.map(s => (
-                  <Path key={s.id} d={s.d} fill={hl.get(s.id) ?? c.land} stroke={c.landStroke} strokeWidth={0.6 * k} />
-                ))}
+                {ordered.map(s => {
+                  const color = hl.get(s.id);
+                  // same-colour stroke closes the hairline gaps between neighbours
+                  const stroke = borders || color ? c.landStroke : c.land;
+                  return <Path key={s.id} d={s.d} fill={color ?? c.land} stroke={stroke} strokeWidth={0.6 * k} />;
+                })}
               </G>
-              {dots.map(d => (
+              {dots.filter(d => borders || hl.has(d.id)).map(d => (
                 <Circle
                   key={d.id}
                   cx={d.x}

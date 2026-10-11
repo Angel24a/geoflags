@@ -78,9 +78,11 @@ export default function Chain() {
       </Row>
 
       <View style={{ marginTop: space.md }}>
+        {/* While playing, borders and the shortest path would give the answer away. */}
         <WorldMap
           height={240}
-          focus={[puzzle.start.id, puzzle.target.id, ...puzzle.optimal]}
+          borders={won || gaveUp}
+          focus={won || gaveUp ? [...puzzle.optimal, ...path] : [puzzle.start.id, puzzle.target.id]}
           highlights={[
             ...shown.map(id => ({ id, color: c.accent })),
             { id: puzzle.start.id, color: c.warning },

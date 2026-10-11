@@ -3,7 +3,7 @@ import { StyleSheet, View } from 'react-native';
 import Svg, { Rect } from 'react-native-svg';
 import { SvgXml } from 'react-native-svg';
 
-import { FLAGS, PIXELS } from '@/data';
+import { FLAGS, pixelsOf } from '@/data';
 import { useTheme } from '@/theme';
 import { withRootAttrs } from './Flag';
 
@@ -35,7 +35,7 @@ export function decodeBase64(s: string): Uint8Array {
 
 /** Average the 24×16 grid down to cols×rows blocks. */
 export function pixelBlocks(id: string, cols: number, rows: number): string[] {
-  const px = decodeBase64(PIXELS[id]);
+  const px = decodeBase64(pixelsOf(id));
   const out: string[] = [];
   const bw = PW / cols;
   const bh = PH / rows;
@@ -56,7 +56,7 @@ export function pixelBlocks(id: string, cols: number, rows: number): string[] {
 
 /** Grid cell (0–1 coordinates) with the most colour variation around it. */
 export function focusPoint(id: string, rng: () => number = Math.random): [number, number] {
-  const px = decodeBase64(PIXELS[id]);
+  const px = decodeBase64(pixelsOf(id));
   const at = (x: number, y: number) => {
     const i = (y * PW + x) * 3;
     return [px[i], px[i + 1], px[i + 2]];

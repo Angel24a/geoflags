@@ -48,7 +48,16 @@ export interface Entity {
   capital?: string;
   latlng?: [number, number];
   area?: number;
+  /** 0 = no permanent population. */
   population?: number;
+  /** Year of the figure, when it is not the latest World Bank data. */
+  popYear?: number;
+  /** The figure counts the members of a people, not a territory. */
+  popPeople?: boolean;
+  /** Countries where a people mainly lives ("Pueblos del mundo"). */
+  homeland?: string[];
+  /** Own language of a people or region. */
+  language?: string;
   /** Ids of bordering entities (land borders). */
   borders: string[];
   years?: string;
@@ -75,4 +84,22 @@ export interface Entity {
   geo: 'shape' | 'tiny' | 'marker' | null;
   /** Part of the 254 base set (ISO 3166-1 + Kosovo + UK nations). */
   base: boolean;
+}
+
+export interface Language {
+  id: string;
+  name: string;
+  /** Name in the language itself. */
+  native: string;
+  aliases?: string[];
+  family: string;
+  branch?: string;
+  script: string;
+  /** Approximate native speakers, in millions. */
+  speakers: number;
+  /** Entity ids where it is official or widely spoken. */
+  countries: string[];
+  /** [sentence, Spanish translation] */
+  phrases: [string, string][];
+  note?: string;
 }

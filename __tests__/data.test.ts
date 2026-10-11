@@ -1,5 +1,6 @@
 import { describe, expect, it } from '@jest/globals';
-import { BY_ID, ENTITIES, FLAGS, PIXELS } from '@/data';
+import { BY_ID, ENTITIES, FLAGS, pixelsOf } from '@/data';
+import { parse } from 'react-native-svg';
 
 describe('generated data', () => {
   it('has the 254 base flags plus the extras', () => {
@@ -11,7 +12,7 @@ describe('generated data', () => {
     expect(new Set(ENTITIES.map(e => e.id)).size).toBe(ENTITIES.length);
     for (const e of ENTITIES) {
       expect(FLAGS[e.id]).toMatch(/^<svg[^>]*viewBox=/);
-      expect(PIXELS[e.id]).toBeTruthy();
+      expect(pixelsOf(e.id)).toBeTruthy();
       expect(e.ratio).toBeGreaterThan(0.8);
       expect(e.ratio).toBeLessThan(2.7);
     }
@@ -31,12 +32,14 @@ describe('generated data', () => {
   it('groups identical flags', () => {
     expect(BY_ID.get('fr')!.sameFlag).toEqual(expect.arrayContaining(['re', 'bl']));
     expect(BY_ID.get('no')!.sameFlag).toEqual(expect.arrayContaining(['bv', 'sj']));
-    expect(BY_ID.get('td')!.sameFlag).not.toContain('ro');
+    // only the shade differs, so they cannot be told apart as answer options
+    expect(BY_ID.get('td')!.sameFlag).toContain('ro');
   });
 
   it('finds visually similar flags', () => {
-    expect(BY_ID.get('td')!.similar.slice(0, 3)).toContain('ro');
-    expect(BY_ID.get('id')!.similar.slice(0, 3)).toContain('mc');
+    expect(BY_ID.get('td')!.similar.slice(0, 3)).toContain('md');
+    expect(BY_ID.get('nl')!.similar.slice(0, 3)).toContain('py');
+    expect(BY_ID.get('id')!.similar.slice(0, 3)).toContain('sg');
     expect(BY_ID.get('ie')!.similar.slice(0, 3)).toContain('ci');
   });
 
@@ -50,5 +53,17 @@ describe('generated data', () => {
     expect(BY_ID.get('gb')!.capital).toBe('Londres');
     expect(BY_ID.get('cn')!.capital).toBe('Pekín');
     expect(BY_ID.get('sz')!.name).toBe('Esuatini');
+  });
+
+  it('has flags that react-native-svg can parse', () => {
+    const bad = Object.entries(FLAGS).filter(([, svg]) => {
+      try {
+        parse(svg);
+        return false;
+      } catch {
+        return true;
+      }
+    });
+    expect(bad.map(([id]) => id)).toEqual([]);
   });
 });

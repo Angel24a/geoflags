@@ -5,7 +5,6 @@ import {
 import type { Feature, FeatureCollection, Geometry } from 'geojson';
 import { feature } from 'topojson-client';
 
-import geoTopo from '@/data/generated/geo.json';
 import { BY_ID } from '@/data';
 import { silhouette } from './shape';
 
@@ -14,7 +13,8 @@ let featureCache: Map<string, F> | null = null;
 
 export function features(): Map<string, F> {
   if (!featureCache) {
-    const topo = geoTopo as unknown as Parameters<typeof feature>[0];
+    // loaded on first use: the home screen and most games do not need the map
+    const topo = require('@/data/generated/geo.json') as Parameters<typeof feature>[0];
     const fc = feature(topo, (topo as unknown as { objects: { countries: never } }).objects.countries) as unknown as FeatureCollection;
     featureCache = new Map(fc.features.map(f => [String(f.id), f as F]));
   }

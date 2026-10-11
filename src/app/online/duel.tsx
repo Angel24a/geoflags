@@ -59,10 +59,15 @@ function Room({ code, host, onLeave }: { code: string; host: boolean; onLeave: (
   const [hostCfg, setHostCfg] = useState<OnlineGameConfig>(DEFAULT_GAME);
   const me = useMemo(() => ({ id: profile.id, name: profile.name, host, version: DATA_VERSION }), [profile, host]);
   const room = useDuelRoom(code, me, host ? hostCfg : undefined);
-  const [finished, setFinished] = useState(false);
+  // Tied to the round, so a new game started from the results screen is played instead of skipped.
+  const [finishedRound, setFinishedRound] = useState<number | null>(null);
+  const finished = !!room.game && finishedRound === room.game.seed;
   const questions = useMemo(() => (room.game ? seededQuestions(room.game.cfg, room.game.seed) : []), [room.game]);
+  const newGame = () => room.start({ cfg: hostCfg, seed: Math.floor(Math.random() * 2 ** 31) });
 
-  const sorted = [...room.players].sort((a, b) => b.score - a.score || a.timeMs - b.timeMs);
+  // only players taking part in this game count for the ranking
+  const inGame = room.game ? room.players.filter(p => p.round === room.game!.seed) : [];
+  const sorted = [...inGame].sort((a, b) => b.score - a.score || a.timeMs - b.timeMs);
   const others = room.players.filter(p => p.id !== profile.id);
   const mismatch = room.players.some(p => p.version !== DATA_VERSION);
 
@@ -81,32 +86,27 @@ function Room({ code, host, onLeave }: { code: string; host: boolean; onLeave: (
     if (!finished) {
       return (
         <View>
-          <LiveStrip players={others} total={questions.length} />
+          <LiveStrip players={inGame.filter(p => p.id !== profile.id)} total={questions.length} />
           <OnlineQuiz
             cfg={room.game.cfg}
             questions={questions}
             onProgress={p => room.report({ score: p.score, answered: p.answered, timeMs: p.timeMs })}
             onFinish={r => {
               room.report({ score: r.score, answered: r.total, timeMs: r.timeMs, finished: true });
-              setFinished(true);
+              setFinishedRound(room.game!.seed);
             }}
           />
         </View>
       );
     }
-    const allDone = room.players.every(p => p.finished);
+    const allDone = sorted.every(p => p.finished);
     return (
       <View style={{ gap: space.md, marginTop: space.md }}>
         <T variant="title" center>{allDone ? (sorted[0]?.id === profile.id ? '¡Has ganado!' : `Gana ${sorted[0]?.name}`) : 'Esperando al resto…'}</T>
         <Ranking players={sorted} total={questions.length} />
-        <Button
-          title={host ? 'Volver a la sala' : 'Volver a la sala'}
-          kind={host ? 'primary' : 'secondary'}
-          onPress={() => {
-            setFinished(false);
-            room.backToLobby();
-          }}
-        />
+        {host && <Button title="Otra partida" onPress={newGame} />}
+        <Button title="Volver a la sala" kind={host ? 'secondary' : 'primary'} onPress={room.backToLobby} />
+        {!host && <T variant="caption" muted center>Si el anfitrión empieza otra partida, entrarás automáticamente.</T>}
       </View>
     );
   }
@@ -129,7 +129,7 @@ function Room({ code, host, onLeave }: { code: string; host: boolean; onLeave: (
         {room.players.map(p => (
           <Row key={p.id} style={{ justifyContent: 'space-between' }}>
             <T>{p.name}{p.id === profile.id ? ' (tú)' : ''}</T>
-            <T variant="caption" muted>{p.host ? 'Anfitrión' : ''}</T>
+            <T variant="caption" muted>{[p.host && 'Anfitrión', p.inLobby === false && 'viendo resultados'].filter(Boolean).join(' · ')}</T>
           </Row>
         ))}
       </Card>
@@ -140,7 +140,7 @@ function Room({ code, host, onLeave }: { code: string; host: boolean; onLeave: (
           <GamePicker value={hostCfg} onChange={cfg => { setHostCfg(cfg); room.announce(cfg); }} />
           <Button
             title={others.length ? 'Empezar' : 'Empezar (aún estás solo)'}
-            onPress={() => room.start({ cfg: hostCfg, seed: Math.floor(Math.random() * 2 ** 31) })}
+            onPress={newGame}
             style={{ marginTop: space.md }}
           />
         </>

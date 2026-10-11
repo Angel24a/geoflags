@@ -1,7 +1,7 @@
 import { describe, expect, it } from '@jest/globals';
 import { BY_ID, ENTITIES } from '@/data';
 import { mulberry32 } from '@/lib/random';
-import { buildDeck, distractors, eligibleFor, hasAttr, isValidConfig, makeQuestion, nextTarget, type QuizConfig } from '@/lib/quiz';
+import { buildDeck, checkTyped, distractors, eligibleFor, hasAttr, isValidConfig, makeQuestion, nextTarget, type QuizConfig } from '@/lib/quiz';
 
 const flagToName: QuizConfig = { prompt: 'flag', answer: 'name', input: 'choice' };
 
@@ -18,6 +18,34 @@ describe('quiz engine', () => {
     expect(eligible.every(e => e.geo === 'shape')).toBe(true);
     expect(eligible.some(e => e.id === 'va')).toBe(false);
     expect(hasAttr(BY_ID.get('un')!, 'capital')).toBe(false);
+  });
+
+  it('treats flags that only differ in shade as the same flag', () => {
+    for (const [a, b] of [['upper-volta', 'german-empire'], ['td', 'ro'], ['id', 'mc'], ['congo-free-state', 'republic-of-texas']]) {
+      expect(BY_ID.get(a)!.sameFlag).toContain(b);
+    }
+    // a small emblem is enough to tell them apart
+    expect(BY_ID.get('py')!.sameFlag).not.toContain('nl');
+    expect(BY_ID.get('eg')!.sameFlag).not.toContain('ye');
+    expect(BY_ID.get('es-cb')!.sameFlag).not.toContain('pl');
+  });
+
+  it('never offers two identical flags as options', () => {
+    const rng = mulberry32(3);
+    const nameToFlag: QuizConfig = { prompt: 'name', answer: 'flag', input: 'choice' };
+    for (const cfg of [flagToName, nameToFlag]) {
+      for (const id of ['upper-volta', 'german-empire', 'td', 'ro', 'mc', 'id']) {
+        for (let k = 0; k < 20; k++) {
+          const ids = makeQuestion(BY_ID.get(id)!, cfg, ENTITIES, { similar: true, rng }).options.map(o => o.id);
+          for (const x of ids) expect(BY_ID.get(x)!.sameFlag.some(y => ids.includes(y))).toBe(false);
+        }
+      }
+    }
+  });
+
+  it('accepts the name of an identical flag when typing', () => {
+    expect(checkTyped('Imperio alemán', BY_ID.get('upper-volta')!, 'name', 'flag')).toBe(true);
+    expect(checkTyped('Imperio alemán', BY_ID.get('upper-volta')!, 'name', 'capital')).toBe(false);
   });
 
   it('builds 4 distinct options including the answer', () => {
