@@ -195,7 +195,8 @@ function optimiseSvg(id: string, raw: string): string {
     multipass: true,
     floatPrecision: Math.max(1, Math.ceil(3 - Math.log10(width))),
     plugins: [
-      { name: 'preset-default', params: { overrides: { cleanupIds: { minify: true } } } },
+      // react-native-svg ignores <style>, so CSS classes become attributes even when reused
+      { name: 'preset-default', params: { overrides: { cleanupIds: { minify: true }, inlineStyles: { onlyMatchedOnce: false } } } },
       'removeTitle',
       'removeDesc',
       'removeDimensions',
@@ -617,6 +618,9 @@ const palette = (a: Feat, b: Feat) => a.hist.reduce((s, v, i) => s + Math.abs(v 
 const keyDiff = (a: Feat, b: Feat) => a.keys.reduce((n, k, i) => n + (k === b.keys[i] ? 0 : 1), 0) / a.keys.length;
 /** Flags with emblems differ by more than this (Paraguay / Netherlands ≈ 0.7%). */
 const SAME_FLAG_MAX_DIFF = 0.005;
+/** Same design that the colour comparison misses (the star is a little bigger). */
+const SAME_FLAG_PAIRS: [string, string][] = [['congo-free-state', 'republic-of-texas']];
+const samePair = (a: string, b: string) => SAME_FLAG_PAIRS.some(([x, y]) => (x === a && y === b) || (x === b && y === a));
 const similar = new Map<string, string[]>();
 const sameFlag = new Map<string, string[]>();
 for (const a of list) {
@@ -627,7 +631,7 @@ for (const a of list) {
       const fb = feats.get(b)!;
       const s = spatial(fa, fb);
       const look = Math.min(s, 1.15 * spatialMirror(fa, fb));
-      const same = s < 2 || keyDiff(fa, fb) < SAME_FLAG_MAX_DIFF;
+      const same = keyDiff(fa, fb) < SAME_FLAG_MAX_DIFF || samePair(a, b);
       return { b, s, same, d: 0.6 * (look / 60) + 0.4 * palette(fa, fb) };
     })
     .sort((x, y) => x.d - y.d);

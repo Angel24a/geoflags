@@ -7,14 +7,14 @@ Hecha con **Expo (React Native) + TypeScript** y Expo Router.
 
 ## Qué incluye
 
-### 349 banderas
+### 350 banderas
 
 | Grupo | Nº | Contenido |
 |---|---:|---|
 | Base | 254 | Los 249 códigos ISO 3166-1 (193 estados de la ONU, Vaticano, Palestina, territorios dependientes…) + Kosovo + Inglaterra, Escocia, Gales e Irlanda del Norte |
 | No reconocidos / reconocimiento limitado | +8 | Abjasia, Osetia del Sur, Transnistria, Somalilandia, Chipre del Norte, Circasia, Ichkeria, Sealand (además de Kosovo, Taiwán, Palestina y Sahara Occidental de la base) |
 | Comunidades autónomas | 19 | Las 17 comunidades + Ceuta y Melilla |
-| Históricas | 32 | URSS, Yugoslavia, RDA, Imperio alemán y ruso, II República, Zaire, Rodesia, Vietnam del Sur, Biafra, Artsaj, Texas, Hawái… |
+| Históricas | 33 | URSS, España franquista, Yugoslavia, RDA, Imperio alemán y ruso, II República, Zaire, Rodesia, Vietnam del Sur, Biafra, Artsaj, Texas, Hawái… |
 | Pueblos y regiones culturales | 23 | Kurdistán, Tíbet, sami, gitano, aborígenes australianos, Bretaña, Córcega, Cerdeña, wiphala, amazigh, maorí… |
 | Organizaciones | 13 | UE, ONU, OTAN, Liga Árabe, ASEAN, Juegos Olímpicos, Cruz Roja… |
 
@@ -104,7 +104,7 @@ __tests__/            tests
    - una cuadrícula de 24×16 píxeles para el modo pixelado;
    - un histograma sobre 10 colores con nombre (en espacio CIELAB);
    - una distancia entre banderas = 0,6 · diferencia espacial (ΔE medio en una cuadrícula de 12×8, también contra la imagen especular) + 0,4 · diferencia de histogramas. Así se obtienen las 15 banderas más parecidas;
-   - los grupos de banderas idénticas: casi el mismo color exacto, o el mismo color con nombre en más del 99,5 % de la superficie (Chad y Rumanía, Alto Volta e Imperio alemán). Nunca salen juntas como opciones;
+   - los grupos de banderas idénticas: el mismo color con nombre en más del 99,5 % de la superficie (Chad y Rumanía, Alto Volta e Imperio alemán). Un escudo o una estrella ya las distingue (Egipto y Yemen son parecidas, no iguales). Las idénticas nunca salen juntas como opciones;
    - las franjas (orientación, colores y grosores) cuando la bandera es solo de franjas;
    - si es simétrica, para no usar la imagen especular como "error".
 4. Geometría de Natural Earth (`world-atlas`): resolución 1:50m para los países grandes y 1:10m para los pequeños; separa los territorios de ultramar de su país (Guayana Francesa, Martinica, Svalbard…) y simplifica cada territorio con Douglas–Peucker en proporción a su tamaño.

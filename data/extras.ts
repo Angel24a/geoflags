@@ -237,6 +237,9 @@ const gdr = svg(500, 300,
 const germanEmpire = svg(600, 400, stripes(600, 400, ['#000', '#fff', '#dd0000']));
 const russianEmpire = svg(600, 400, stripes(600, 400, ['#000', '#ffd700', '#fff']));
 const secondRepublic = svg(900, 600, stripes(900, 600, ['#c60b1e', '#ffc400', '#6c3483']));
+
+// red-yellow-red with the eagle of Saint John (the drawing is in data/flags/franquista.svg)
+const francoist = svg(750, 500, stripes(750, 500, ['#c60b1e', '#ffc400', '#c60b1e'], 'h', [1, 2, 1]));
 const libya1977 = svg(600, 300, rect(0, 0, 600, 300, '#009a00'));
 const uar = svg(600, 400, stripes(600, 400, ['#ce1126', '#fff', '#000']) + star(210, 200, 40, '#007a3d') + star(390, 200, 40, '#007a3d'));
 const iraq1963 = svg(600, 400, stripes(600, 400, ['#ce1126', '#fff', '#000']) +
@@ -578,6 +581,7 @@ export const EXTRAS: ExtraEntity[] = [
   { id: 'gdr', name: 'Alemania Oriental', aliases: ['RDA'], category: 'historical', continent: 'europe', capital: 'Berlín Este', years: '1949–1990', latlng: [52.5, 13.4], svg: gdr, simplified: true },
   { id: 'german-empire', name: 'Imperio alemán', category: 'historical', continent: 'europe', capital: 'Berlín', years: '1871–1918', latlng: [52.5, 13.4], svg: germanEmpire },
   { id: 'russian-empire', name: 'Imperio ruso', category: 'historical', continent: 'europe', capital: 'San Petersburgo', years: '1858–1883', latlng: [59.9, 30.3], svg: russianEmpire },
+  { id: 'franquista', name: 'España franquista', aliases: ['Franquismo', 'Bandera franquista', 'Estado Español'], category: 'historical', continent: 'europe', capital: 'Madrid', years: '1938–1977', latlng: [40.4, -3.7], svg: francoist, note: 'Bandera de España durante la dictadura de Franco, con el águila de San Juan.' },
   { id: 'second-spanish-republic', name: 'Segunda República Española', category: 'historical', continent: 'europe', capital: 'Madrid', years: '1931–1939', latlng: [40.4, -3.7], svg: secondRepublic, simplified: true },
   { id: 'libya-1977', name: 'Libia (Yamahiriya)', category: 'historical', continent: 'africa', capital: 'Trípoli', years: '1977–2011', latlng: [32.9, 13.2], svg: libya1977, note: 'La única bandera nacional moderna de un solo color.' },
   { id: 'uar', name: 'República Árabe Unida', aliases: ['Siria (1980–2024)'], category: 'historical', continent: 'africa', capital: 'El Cairo', years: '1958–1971', latlng: [30.0, 31.2], svg: uar, note: 'Siria usó este mismo diseño entre 1980 y 2024.' },

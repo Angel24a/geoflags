@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1280" viewBox="0 0 1920 1280">
+  <!-- Tino Rangatiratanga, traced from the 1924×1280 PNG -->
+  <rect width="1920" height="1280" fill="#d40000"/>
+  <rect width="1920" height="745" fill="#000"/>
+  <path d="M0,171H540A235,287 0 0 1 540,745V405H0Z" fill="#fff"/>
+  <path d="M0,405H540A137,170 0 0 1 540,745V760H0Z" fill="#d40000"/>
+  <path d="M1920,745V980H540A201,235 0 0 1 540,511A92,117 0 0 1 540,745Z" fill="#fff"/>
+</svg>

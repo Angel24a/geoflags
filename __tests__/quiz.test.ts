@@ -21,11 +21,13 @@ describe('quiz engine', () => {
   });
 
   it('treats flags that only differ in shade as the same flag', () => {
-    for (const [a, b] of [['upper-volta', 'german-empire'], ['td', 'ro'], ['id', 'mc'], ['pl', 'es-cb']]) {
+    for (const [a, b] of [['upper-volta', 'german-empire'], ['td', 'ro'], ['id', 'mc'], ['congo-free-state', 'republic-of-texas']]) {
       expect(BY_ID.get(a)!.sameFlag).toContain(b);
     }
     // a small emblem is enough to tell them apart
     expect(BY_ID.get('py')!.sameFlag).not.toContain('nl');
+    expect(BY_ID.get('eg')!.sameFlag).not.toContain('ye');
+    expect(BY_ID.get('es-cb')!.sameFlag).not.toContain('pl');
   });
 
   it('never offers two identical flags as options', () => {
