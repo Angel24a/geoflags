@@ -1,12 +1,31 @@
 import { memo, useMemo } from 'react';
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
-import { SvgXml } from 'react-native-svg';
+import { parse, SvgAst, SvgXml, type JsxAST } from 'react-native-svg';
 
 import { BY_ID, FLAGS } from '@/data';
 import { useApp } from '@/state/app-state';
 import { useTheme } from '@/theme';
 
 export const NORMALIZED_RATIO = 1.5;
+
+/**
+ * Parsed flags. Parsing the SVG text is the slow part of drawing a flag and
+ * lists (glossary, options) mount the same flags again and again.
+ */
+const astCache = new Map<string, JsxAST | null>();
+function flagAst(id: string): JsxAST | null {
+  let ast = astCache.get(id);
+  if (ast === undefined) {
+    const src = FLAGS[id];
+    try {
+      ast = src ? parse(src) : null;
+    } catch {
+      ast = null;
+    }
+    astCache.set(id, ast);
+  }
+  return ast;
+}
 
 /** Insert attributes on the root <svg> element. */
 export function withRootAttrs(xml: string, attrs: Record<string, string>): string {
@@ -47,14 +66,15 @@ function FlagImpl({ id, height, width, xml, style, normalized, real }: Props) {
     if (width / height > ratio) w = height * ratio;
     else h = width / ratio;
   }
-  const src = xml ?? FLAGS[id];
-  const content = useMemo(
-    () => (src ? (useReal ? src : withRootAttrs(src, { preserveAspectRatio: 'none' })) : ''),
-    [src, useReal],
-  );
+  // altered flags ("spot the error") are parsed each time; the official ones come from the cache
+  const custom = useMemo(() => (xml ? (useReal ? xml : withRootAttrs(xml, { preserveAspectRatio: 'none' })) : null), [xml, useReal]);
   return (
     <View style={[{ width: w, height: h, borderRadius: 3, overflow: 'hidden' }, style]}>
-      {content ? <SvgXml xml={content} width={w} height={h} /> : null}
+      {custom ? (
+        <SvgXml xml={custom} width={w} height={h} />
+      ) : (
+        <SvgAst ast={flagAst(id)} override={useReal ? { width: w, height: h } : { width: w, height: h, preserveAspectRatio: 'none' }} />
+      )}
       <View pointerEvents="none" style={[StyleSheet.absoluteFill, { borderWidth: StyleSheet.hairlineWidth, borderColor: c.flagBorder, borderRadius: 3 }]} />
     </View>
   );

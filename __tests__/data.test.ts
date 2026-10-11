@@ -1,5 +1,5 @@
 import { describe, expect, it } from '@jest/globals';
-import { BY_ID, ENTITIES, FLAGS, PIXELS } from '@/data';
+import { BY_ID, ENTITIES, FLAGS, pixelsOf } from '@/data';
 import { parse } from 'react-native-svg';
 
 describe('generated data', () => {
@@ -12,7 +12,7 @@ describe('generated data', () => {
     expect(new Set(ENTITIES.map(e => e.id)).size).toBe(ENTITIES.length);
     for (const e of ENTITIES) {
       expect(FLAGS[e.id]).toMatch(/^<svg[^>]*viewBox=/);
-      expect(PIXELS[e.id]).toBeTruthy();
+      expect(pixelsOf(e.id)).toBeTruthy();
       expect(e.ratio).toBeGreaterThan(0.8);
       expect(e.ratio).toBeLessThan(2.7);
     }

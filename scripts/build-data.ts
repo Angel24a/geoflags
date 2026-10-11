@@ -203,14 +203,24 @@ if (fs.existsSync(flagsDir)) {
 // Flags: optimise SVG
 // ---------------------------------------------------------------------------
 
+/** Flags heavier than this after optimising lose one more decimal (detailed coats of arms). */
+const HEAVY_FLAG = 60_000;
+
 function optimiseSvg(id: string, raw: string): string {
   // Keep ~3 significant digits relative to the flag size.
   const vb = raw.match(/viewBox="[\d.\-]+[\s,]+[\d.\-]+[\s,]+([\d.]+)/);
   const wAttr = raw.match(/<svg[^>]*\swidth="([\d.]+)/);
   const width = vb ? +vb[1] : wAttr ? +wAttr[1] : 600;
+  const precision = Math.max(1, Math.ceil(3 - Math.log10(width)));
+  const out = optimiseWith(id, raw, precision);
+  // an error of a thousandth of the width is invisible at phone sizes
+  return out.length > HEAVY_FLAG ? optimiseWith(id, raw, Math.max(0, Math.ceil(2.5 - Math.log10(width)))) : out;
+}
+
+function optimiseWith(id: string, raw: string, floatPrecision: number): string {
   const res = optimize(raw, {
     multipass: true,
-    floatPrecision: Math.max(1, Math.ceil(3 - Math.log10(width))),
+    floatPrecision,
     plugins: [
       // react-native-svg ignores <style>, so CSS classes become attributes even when reused
       { name: 'preset-default', params: { overrides: { cleanupIds: { minify: true }, inlineStyles: { onlyMatchedOnce: false } } } },

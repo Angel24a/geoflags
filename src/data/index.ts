@@ -1,6 +1,5 @@
 import entitiesJson from './generated/entities.json';
 import flagsJson from './generated/flags.json';
-import pixelsJson from './generated/pixels.json';
 import type { Category, ColorKey, Continent, Entity } from './types';
 
 export * from './types';
@@ -8,7 +7,14 @@ export * from './types';
 export const ENTITIES = entitiesJson as Entity[];
 export const BY_ID = new Map(ENTITIES.map(e => [e.id, e]));
 export const FLAGS = flagsJson as Record<string, string>;
-export const PIXELS = pixelsJson as Record<string, string>;
+
+// Only "Pixelada o zoom" needs the pixel grids: load them on first use instead of at start-up.
+let pixelsCache: Record<string, string> | null = null;
+/** Base64 RGB 24×16 grid of a flag. */
+export function pixelsOf(id: string): string {
+  pixelsCache ??= require('./generated/pixels.json') as Record<string, string>;
+  return pixelsCache[id];
+}
 
 export function entity(id: string): Entity {
   const e = BY_ID.get(id);
