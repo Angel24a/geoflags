@@ -41,6 +41,8 @@ function Navigator() {
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="pool" options={{ title: 'Banderas en juego', presentation: 'modal' }} />
         <Stack.Screen name="glossary/[id]" options={{ title: '' }} />
+        <Stack.Screen name="language/[id]" options={{ title: '' }} />
+        <Stack.Screen name="settings" options={{ title: 'Ajustes' }} />
       </Stack>
     </ThemeProvider>
   );

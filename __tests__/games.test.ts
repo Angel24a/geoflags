@@ -2,6 +2,7 @@ import { describe, expect, it } from '@jest/globals';
 import { BY_ID, ENTITIES, FLAGS } from '@/data';
 import { areNeighbors, makeChain, shortestPath } from '@/lib/chain';
 import { sameDesign } from '@/lib/games';
+import { groupRecords } from '@/lib/records';
 import { checkHomeland, nextPeople, peopleTargets } from '@/lib/peoples';
 import { density, populationFact } from '@/lib/population';
 import { hasShape } from '@/lib/geo';
@@ -141,5 +142,13 @@ describe('population', () => {
   it('only computes density for territories', () => {
     expect(density(BY_ID.get('es')!)).toBeGreaterThan(50);
     expect(density(BY_ID.get('kurdistan')!)).toBeUndefined();
+  });
+});
+
+describe('records', () => {
+  it('groups records by game and keeps modes apart', () => {
+    const g = groupRecords({ 'population:choice': 80, 'population:higher': 12, 'survival:flag-name:choice': 7, 'survival:x:y': 9, 'complete:Europa': 300, 'complete:Asia': 200 });
+    const rows = Object.fromEntries(g.flatMap(x => x.rows.map(r => [r.key, r.value])));
+    expect(rows).toEqual({ 'population:choice': 80, 'population:higher': 12, survival: 9, complete: 200 });
   });
 });

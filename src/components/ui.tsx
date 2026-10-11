@@ -181,6 +181,11 @@ const ICONS = {
   shuffle: 'M3 7h4l10 10h4M3 17h4l3-3M14 10l3-3h4M18 4l3 3-3 3M18 14l3 3-3 3',
   globe: 'M12 21a9 9 0 100-18 9 9 0 000 18zM3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18',
   people: 'M9 11a3 3 0 100-6 3 3 0 000 6zM3 20c0-3.3 2.7-5 6-5s6 1.7 6 5M16 11a3 3 0 000-6M18 15c2 .6 3 2.3 3 5',
+  settings: 'M12 15a3 3 0 100-6 3 3 0 000 6zM12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9L7 7M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1',
+  language: 'M4 4h16v12H10l-5 4v-4H4zM8 8h8M8 12h5',
+  map: 'M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3zM9 3v15M15 6v15',
+  flag: 'M5 21V4M5 4h12l-2.5 4L17 12H5',
+  population: 'M8 10a2.5 2.5 0 100-5 2.5 2.5 0 000 5zM16 10a2.5 2.5 0 100-5 2.5 2.5 0 000 5zM3 19c0-3 2.2-5 5-5s5 2 5 5M11 19c0-3 2.2-5 5-5s5 2 5 5',
 } as const;
 
 export type IconName = keyof typeof ICONS;

@@ -214,3 +214,19 @@ const styles = StyleSheet.create({
   suggestions: { marginTop: 4, borderWidth: StyleSheet.hairlineWidth, borderRadius: radius.md, overflow: 'hidden' },
   suggestion: { paddingVertical: 12, paddingHorizontal: space.md },
 });
+
+/** End of a game with a fixed number of rounds. */
+export function SummaryCard({
+  title, lines, record, onAgain, onOptions,
+}: { title: string; lines: string[]; record?: boolean; onAgain: () => void; onOptions: () => void }) {
+  const c = useTheme();
+  return (
+    <Card style={{ marginTop: space.lg, gap: space.sm, alignItems: 'center' }}>
+      <T variant="title" center>{title}</T>
+      {record && <T variant="label" color={c.success}>¡Nuevo récord!</T>}
+      {lines.map(l => <T key={l} muted center>{l}</T>)}
+      <Button title="Otra partida" onPress={onAgain} style={{ alignSelf: 'stretch', marginTop: space.sm }} />
+      <Button title="Cambiar opciones" kind="secondary" onPress={onOptions} style={{ alignSelf: 'stretch' }} />
+    </Card>
+  );
+}

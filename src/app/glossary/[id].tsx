@@ -6,7 +6,7 @@ import { Flag } from '@/components/Flag';
 import { ShapeView } from '@/components/ShapeView';
 import { WorldMap } from '@/components/WorldMap';
 import { Card, Chip, Row, Screen, SectionTitle, T } from '@/components/ui';
-import { BY_ID, CATEGORY_LABEL, COLOR_HEX, COLOR_LABEL, CONTINENT_LABEL } from '@/data';
+import { BY_ID, LANGUAGES_OF, CATEGORY_LABEL, COLOR_HEX, COLOR_LABEL, CONTINENT_LABEL } from '@/data';
 import { density, populationFact } from '@/lib/population';
 import { MASTERY_LABEL, masteryLevel, useApp } from '@/state/app-state';
 import { MAX_WIDTH, space, useTheme } from '@/theme';
@@ -92,6 +92,16 @@ export default function EntityDetail() {
         </>
       )}
 
+      {(LANGUAGES_OF.get(e.id)?.length ?? 0) > 0 && (
+        <>
+          <SectionTitle>Idiomas</SectionTitle>
+          <Row wrap gap={6}>
+            {LANGUAGES_OF.get(e.id)!.map(l => (
+              <Chip key={l.id} label={l.name} onPress={() => router.push({ pathname: '/language/[id]', params: { id: l.id } })} />
+            ))}
+          </Row>
+        </>
+      )}
       {e.borders.length > 0 && (
         <>
           <SectionTitle>Fronteras</SectionTitle>
