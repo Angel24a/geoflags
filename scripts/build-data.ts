@@ -23,6 +23,7 @@ import { mainPartShare, silhouetteFill } from '../src/lib/shape';
 import { ALIASES, CAPITALS_ES, NAME_OVERRIDES } from '../data/spanish';
 import { POPULATION_EXTRA } from '../data/population-extra';
 import { PEOPLES } from '../data/peoples';
+import { LANGUAGES } from '../data/languages';
 import type { Bands, Category, ColorKey, Continent, Entity } from '../src/data/types';
 
 const require = createRequire(import.meta.url);
@@ -188,6 +189,18 @@ for (const [id, fact] of Object.entries(PEOPLES)) {
   const unknown = fact.homeland.filter(h => !ids.has(h));
   if (unknown.length) throw new Error(`peoples: ${id} has unknown homeland ${unknown.join(', ')}`);
   Object.assign(d, { homeland: fact.homeland, language: fact.language });
+}
+
+// Languages: every country must exist and every language needs a few sentences to vary
+{
+  const seen = new Set<string>();
+  for (const l of LANGUAGES) {
+    if (seen.has(l.id)) throw new Error(`languages: duplicate id ${l.id}`);
+    seen.add(l.id);
+    const unknown = l.countries.filter(c => !ids.has(c));
+    if (unknown.length) throw new Error(`languages: ${l.id} has unknown countries ${unknown.join(', ')}`);
+    if (l.phrases.length < 2) throw new Error(`languages: ${l.id} needs at least 2 sentences`);
+  }
 }
 
 // a misspelt file name would silently be ignored
@@ -712,4 +725,5 @@ write('entities.json', entities);
 write('flags.json', flags);
 write('pixels.json', Object.fromEntries([...feats].map(([id, f]) => [id, f.pixels])));
 write('geo.json', topo);
+write('languages.json', LANGUAGES);
 console.log(`${entities.length} entities (${entities.filter(e => e.base).length} base)`);

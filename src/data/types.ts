@@ -85,3 +85,21 @@ export interface Entity {
   /** Part of the 254 base set (ISO 3166-1 + Kosovo + UK nations). */
   base: boolean;
 }
+
+export interface Language {
+  id: string;
+  name: string;
+  /** Name in the language itself. */
+  native: string;
+  aliases?: string[];
+  family: string;
+  branch?: string;
+  script: string;
+  /** Approximate native speakers, in millions. */
+  speakers: number;
+  /** Entity ids where it is official or widely spoken. */
+  countries: string[];
+  /** [sentence, Spanish translation] */
+  phrases: [string, string][];
+  note?: string;
+}

@@ -1,12 +1,18 @@
 import entitiesJson from './generated/entities.json';
 import flagsJson from './generated/flags.json';
-import type { Category, ColorKey, Continent, Entity } from './types';
+import languagesJson from './generated/languages.json';
+import type { Category, ColorKey, Continent, Entity, Language } from './types';
 
 export * from './types';
 
 export const ENTITIES = entitiesJson as Entity[];
 export const BY_ID = new Map(ENTITIES.map(e => [e.id, e]));
 export const FLAGS = flagsJson as Record<string, string>;
+export const LANGUAGES = (languagesJson as Language[]).slice().sort((a, b) => a.name.localeCompare(b.name, 'es'));
+export const LANGUAGE_BY_ID = new Map(LANGUAGES.map(l => [l.id, l]));
+/** Languages spoken in each entity. */
+export const LANGUAGES_OF = new Map<string, Language[]>();
+for (const l of LANGUAGES) for (const c of l.countries) LANGUAGES_OF.set(c, [...(LANGUAGES_OF.get(c) ?? []), l]);
 
 // Only "Pixelada o zoom" needs the pixel grids: load them on first use instead of at start-up.
 let pixelsCache: Record<string, string> | null = null;
